@@ -1,0 +1,4 @@
+[run]
+omit =
+    */chain_proxy.py
+    httpx_socks/proxy/basic_auth.py
