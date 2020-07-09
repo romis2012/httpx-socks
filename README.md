@@ -7,6 +7,7 @@ SOCKS4(a), SOCKS5, HTTP (tunneling) proxy supported.
 ## Requirements
 - Python >= 3.6
 - httpx >= 0.13.3
+- async-timeout>=3.0.1
 
 ## Installation
 ```
