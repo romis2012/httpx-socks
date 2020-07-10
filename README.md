@@ -1,6 +1,10 @@
 # httpx-socks
 
-Proxy transports for [httpx](https://github.com/encode/httpx) library. 
+[![Build Status](https://travis-ci.org/romis2012/httpx-socks.svg?branch=master)](https://travis-ci.org/romis2012/httpx-socks)
+[![Coverage Status](https://coveralls.io/repos/github/romis2012/httpx-socks/badge.svg?branch=master&_=x)](https://coveralls.io/github/romis2012/httpx-socks?branch=master)
+[![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://badge.fury.io/py/httpx-socks)
+
+Proxy transports for [httpx](https://github.com/encode/httpx) client. 
 SOCKS4(a), SOCKS5, HTTP (tunneling) proxy supported.
 
 
@@ -11,7 +15,7 @@ SOCKS4(a), SOCKS5, HTTP (tunneling) proxy supported.
 
 ## Installation
 ```
-will be available soon, work is still in progress
+pip install httpx-socks
 ```
 
 ## Usage
