@@ -1,15 +1,15 @@
 __title__ = 'httpx-socks'
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
-from .proxy import (
+from ._proxy import (
     ProxyError,
     ProxyTimeoutError,
     ProxyConnectionError,
     ProxyType
 )
 
-from .sync_transport import SyncProxyTransport
-from .async_transport import AsyncProxyTransport
+from ._sync_transport import SyncProxyTransport
+from ._async_transport import AsyncProxyTransport
 
 __all__ = (
     '__title__',

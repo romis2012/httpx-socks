@@ -4,8 +4,8 @@ from httpcore._sync.connection import SyncHTTPConnection # noqa
 from httpcore._utils import url_to_origin # noqa
 from httpx._config import SSLConfig # noqa
 
-from .proxy import ProxyType, parse_proxy_url
-from .proxy.sync import create_proxy
+from ._proxy import ProxyType, parse_proxy_url
+from ._proxy._sync import create_proxy
 
 
 class SyncProxyTransport(SyncConnectionPool):

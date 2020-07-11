@@ -32,7 +32,7 @@ def fetch(url):
         return res.text
 ```
 
-#### async transport (only asyncio backend supported)
+#### async transport (both asyncio and trio supported)
 ```python
 import httpx
 from httpx_socks import AsyncProxyTransport

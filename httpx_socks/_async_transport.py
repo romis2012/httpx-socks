@@ -1,14 +1,17 @@
 import asyncio
+import trio
+import sniffio
 
 from httpcore import AsyncConnectionPool
 from httpcore._async.connection import AsyncHTTPConnection  # noqa
 from httpcore._backends.asyncio import (SocketStream  # noqa
                                         as AsyncioSocketStream)
+from httpcore._backends.trio import (SocketStream  # noqa
+                                     as TrioSocketStream)
 from httpcore._utils import url_to_origin  # noqa
 from httpx._config import SSLConfig  # noqa
 
-from .proxy import ProxyType, parse_proxy_url
-from .proxy.aio import create_proxy
+from ._proxy import ProxyType, parse_proxy_url
 
 
 class AsyncProxyTransport(AsyncConnectionPool):
@@ -71,27 +74,68 @@ class AsyncProxyTransport(AsyncConnectionPool):
         timeout = {} if timeout is None else timeout
         connect_timeout = timeout.get('connect')
 
-        proxy = create_proxy(
-            loop=self._loop,
-            proxy_type=self._proxy_type,
-            host=self._proxy_host, port=self._proxy_port,
-            username=self._username, password=self._password,
-            rdns=self._rdns
+        return await self._open_stream(
+            host=host,
+            port=port,
+            connect_timeout=connect_timeout,
+            ssl_context=ssl_context
         )
 
-        await proxy.connect(host, port, timeout=connect_timeout)
-        # noinspection PyTypeChecker
-        stream_reader, stream_writer = await asyncio.open_connection(
-            loop=self._loop,
-            host=None,
-            port=None,
-            sock=proxy.socket,
-            ssl=ssl_context,
-            server_hostname=host if ssl_context else None,
-        )
-        return AsyncioSocketStream(
-            stream_reader=stream_reader, stream_writer=stream_writer
-        )
+    async def _open_stream(self, host, port, connect_timeout, ssl_context):
+        backend = sniffio.current_async_library()
+
+        if backend == 'asyncio':
+            from ._proxy._asyncio import create_proxy
+
+            proxy = create_proxy(
+                loop=self._loop,
+                proxy_type=self._proxy_type,
+                host=self._proxy_host, port=self._proxy_port,
+                username=self._username, password=self._password,
+                rdns=self._rdns
+            )
+
+            await proxy.connect(host, port, timeout=connect_timeout)
+            # noinspection PyTypeChecker
+            stream_reader, stream_writer = await asyncio.open_connection(
+                loop=self._loop,
+                host=None,
+                port=None,
+                sock=proxy.socket,
+                ssl=ssl_context,
+                server_hostname=host if ssl_context else None,
+            )
+            return AsyncioSocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )
+
+        elif backend == 'trio':
+            from ._proxy._trio import create_proxy  # noqa
+
+            proxy = create_proxy(
+                proxy_type=self._proxy_type,
+                host=self._proxy_host, port=self._proxy_port,
+                username=self._username, password=self._password,
+                rdns=self._rdns
+            )
+
+            await proxy.connect(host, port, timeout=connect_timeout)
+
+            stream = trio.SocketStream(proxy.socket)
+
+            if ssl_context is not None:
+                stream = trio.SSLStream(
+                    stream, ssl_context,
+                    server_hostname=host
+                )
+                await stream.do_handshake()
+
+            return TrioSocketStream(
+                stream=stream
+            )
+
+        else:  # pragma: nocover
+            raise RuntimeError(f'Unsupported concurrency backend {backend!r}')
 
     @classmethod
     def from_url(cls, url, **kwargs):
