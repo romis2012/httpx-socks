@@ -13,7 +13,7 @@ before_install:
   - chmod +x $TRAVIS_BUILD_DIR/tests/3proxy/bin/linux/3proxy
 
 install:
-  - pip install -r requirements-dev.txt
+  - pip install -r requirements-dev.txt -U
   - pip install -e .
 
 script:
