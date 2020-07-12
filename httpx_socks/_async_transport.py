@@ -11,7 +11,7 @@ from httpcore._backends.trio import (SocketStream  # noqa
 from httpcore._utils import url_to_origin  # noqa
 from httpx._config import SSLConfig  # noqa
 
-from ._proxy import ProxyType, parse_proxy_url
+from .core_socks import ProxyType, parse_proxy_url
 
 
 class AsyncProxyTransport(AsyncConnectionPool):
@@ -21,9 +21,6 @@ class AsyncProxyTransport(AsyncConnectionPool):
                  http2=False, ssl_context=None, verify=True, cert=None,
                  trust_env=True,
                  loop=None):
-
-        if loop is None:
-            loop = asyncio.get_event_loop()
 
         self._loop = loop
         self._proxy_type = proxy_type
@@ -85,23 +82,28 @@ class AsyncProxyTransport(AsyncConnectionPool):
         backend = sniffio.current_async_library()
 
         if backend == 'asyncio':
-            from ._proxy._asyncio import create_proxy
+            if self._loop is None:
+                self._loop = asyncio.get_event_loop()
 
-            proxy = create_proxy(
+            from .core_socks.asyn.asyncio import Proxy
+
+            proxy = Proxy.create(
                 loop=self._loop,
                 proxy_type=self._proxy_type,
-                host=self._proxy_host, port=self._proxy_port,
-                username=self._username, password=self._password,
+                host=self._proxy_host,
+                port=self._proxy_port,
+                username=self._username,
+                password=self._password,
                 rdns=self._rdns
             )
 
-            await proxy.connect(host, port, timeout=connect_timeout)
+            sock = await proxy.connect(host, port, timeout=connect_timeout)
             # noinspection PyTypeChecker
             stream_reader, stream_writer = await asyncio.open_connection(
                 loop=self._loop,
                 host=None,
                 port=None,
-                sock=proxy.socket,
+                sock=sock,
                 ssl=ssl_context,
                 server_hostname=host if ssl_context else None,
             )
@@ -110,18 +112,20 @@ class AsyncProxyTransport(AsyncConnectionPool):
             )
 
         elif backend == 'trio':
-            from ._proxy._trio import create_proxy  # noqa
+            from .core_socks.asyn.trio import Proxy
 
-            proxy = create_proxy(
+            proxy = Proxy.create(
                 proxy_type=self._proxy_type,
-                host=self._proxy_host, port=self._proxy_port,
-                username=self._username, password=self._password,
+                host=self._proxy_host,
+                port=self._proxy_port,
+                username=self._username,
+                password=self._password,
                 rdns=self._rdns
             )
 
-            await proxy.connect(host, port, timeout=connect_timeout)
+            sock = await proxy.connect(host, port, timeout=connect_timeout)
 
-            stream = trio.SocketStream(proxy.socket)
+            stream = trio.SocketStream(sock)
 
             if ssl_context is not None:
                 stream = trio.SSLStream(

@@ -1,4 +1,4 @@
 [run]
 omit =
     */chain_proxy.py
-    httpx_socks/_proxy/basic_auth.py
+    httpx_socks/core_socks/_basic_auth.py

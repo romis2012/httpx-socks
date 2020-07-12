@@ -4,8 +4,8 @@ from httpcore._sync.connection import SyncHTTPConnection # noqa
 from httpcore._utils import url_to_origin # noqa
 from httpx._config import SSLConfig # noqa
 
-from ._proxy import ProxyType, parse_proxy_url
-from ._proxy._sync import create_proxy
+from .core_socks import ProxyType, parse_proxy_url
+from .core_socks.sync import Proxy
 
 
 class SyncProxyTransport(SyncConnectionPool):
@@ -59,15 +59,16 @@ class SyncProxyTransport(SyncConnectionPool):
         timeout = {} if timeout is None else timeout
         connect_timeout = timeout.get('connect')
 
-        proxy = create_proxy(
+        proxy = Proxy.create(
             proxy_type=self._proxy_type,
-            host=self._proxy_host, port=self._proxy_port,
-            username=self._username, password=self._password,
+            host=self._proxy_host,
+            port=self._proxy_port,
+            username=self._username,
+            password=self._password,
             rdns=self._rdns
         )
 
-        proxy.connect(host, port, timeout=connect_timeout)
-        sock = proxy.socket
+        sock = proxy.connect(host, port, timeout=connect_timeout)
 
         if ssl_context is not None:
             sock = ssl_context.wrap_socket(
