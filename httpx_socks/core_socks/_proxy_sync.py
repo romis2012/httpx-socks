@@ -10,11 +10,24 @@ from ._proto_http_sync import HttpProto
 from ._proto_socks4_sync import Socks4Proto
 
 
+class SyncProxy:
+    def connect(self, dest_host, dest_port, timeout=None, _socket=None):
+        raise NotImplementedError()
+
+    @property
+    def proxy_host(self):
+        raise NotImplementedError()
+
+    @property
+    def proxy_port(self):
+        raise NotImplementedError()
+
+
 class Proxy:
     @classmethod
     def create(cls, proxy_type: ProxyType, host: str, port: int,
                username: str = None, password: str = None,
-               rdns: bool = None) -> 'BaseProxy':
+               rdns: bool = None) -> SyncProxy:
 
         if proxy_type == ProxyType.SOCKS4:
             return Socks4Proxy(
@@ -44,7 +57,7 @@ class Proxy:
         raise ValueError('Invalid proxy type: %s' % proxy_type)
 
     @classmethod
-    def from_url(cls, url: str, **kwargs) -> 'BaseProxy':
+    def from_url(cls, url: str, **kwargs) -> SyncProxy:
         proxy_type, host, port, username, password = parse_proxy_url(url)
         return cls.create(
             proxy_type=proxy_type,
@@ -56,7 +69,7 @@ class Proxy:
         )
 
 
-class BaseProxy:
+class BaseProxy(SyncProxy):
     def __init__(self, proxy_host, proxy_port):
         self._proxy_host = proxy_host
         self._proxy_port = proxy_port
@@ -103,6 +116,14 @@ class BaseProxy:
 
     def _create_proto(self):
         raise NotImplementedError()
+
+    @property
+    def proxy_host(self):
+        return self._proxy_host
+
+    @property
+    def proxy_port(self):
+        return self._proxy_port
 
 
 class Socks5Proxy(BaseProxy):

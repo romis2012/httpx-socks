@@ -107,6 +107,14 @@ class BaseProxy:
     def _create_proto(self):
         raise NotImplementedError()
 
+    @property
+    def _host(self):
+        return self._proxy_host
+
+    @property
+    def _port(self):
+        return self._proxy_port
+
 
 class Socks5Proxy(BaseProxy):
     def __init__(self, proxy_host, proxy_port,

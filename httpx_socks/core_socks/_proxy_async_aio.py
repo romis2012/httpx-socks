@@ -5,6 +5,7 @@ from ._types import ProxyType
 from ._errors import ProxyConnectionError, ProxyTimeoutError
 from ._helpers import parse_proxy_url
 
+from ._proxy_async import AsyncProxy
 from ._stream_async_aio import SocketStream
 from ._proto_socks5_async import Socks5Proto
 from ._proto_http_async import HttpProto
@@ -16,7 +17,7 @@ class Proxy:
     def create(cls, proxy_type: ProxyType, host: str, port: int,
                username: str = None, password: str = None,
                rdns: bool = None,
-               loop: asyncio.AbstractEventLoop = None) -> 'BaseProxy':
+               loop: asyncio.AbstractEventLoop = None) -> AsyncProxy:
 
         if loop is None:
             loop = asyncio.get_event_loop()
@@ -52,7 +53,7 @@ class Proxy:
         raise ValueError('Invalid proxy type: %s' % proxy_type)
 
     @classmethod
-    def from_url(cls, url: str, **kwargs) -> 'BaseProxy':
+    def from_url(cls, url: str, **kwargs) -> AsyncProxy:
         proxy_type, host, port, username, password = parse_proxy_url(url)
         return cls.create(
             proxy_type=proxy_type,
@@ -64,7 +65,7 @@ class Proxy:
         )
 
 
-class BaseProxy:
+class BaseProxy(AsyncProxy):
     def __init__(self, loop: asyncio.AbstractEventLoop,
                  proxy_host, proxy_port):
 
@@ -141,6 +142,14 @@ class BaseProxy:
 
     def _create_proto(self):
         raise NotImplementedError()
+
+    @property
+    def proxy_host(self):
+        return self._proxy_host
+
+    @property
+    def proxy_port(self):
+        return self._proxy_port
 
 
 class Socks5Proxy(BaseProxy):
