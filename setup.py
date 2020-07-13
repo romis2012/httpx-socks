@@ -38,9 +38,9 @@ setup(
         'httpx_socks',
         'httpx_socks.core_socks',
         'httpx_socks.core_socks.sync',
-        'httpx_socks.core_socks.asyn',
-        'httpx_socks.core_socks.asyn.asyncio',
-        'httpx_socks.core_socks.asyn.trio',
+        'httpx_socks.core_socks.async_',
+        'httpx_socks.core_socks.async_.asyncio',
+        'httpx_socks.core_socks.async_.trio',
     ],
     keywords='httpx asyncio socks socks5 socks4 http proxy',
     install_requires=[
