@@ -13,7 +13,7 @@ class SyncProxyTransport(SyncConnectionPool):
                  proxy_host: str, proxy_port: int,
                  username=None, password=None, rdns=None,
                  http2=False, ssl_context=None, verify=True, cert=None,
-                 trust_env=True):
+                 trust_env=True, **kwargs):
 
         self._proxy_type = proxy_type
         self._proxy_host = proxy_host
@@ -28,10 +28,7 @@ class SyncProxyTransport(SyncConnectionPool):
                 trust_env=trust_env, http2=http2
             ).ssl_context
 
-        self.ssl_context = ssl_context
-        self.http2 = http2
-
-        super().__init__(http2=http2, ssl_context=ssl_context)
+        super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
     def request(self, method, url, headers=None, stream=None, timeout=None):
         origin = url_to_origin(url)
@@ -53,7 +50,7 @@ class SyncProxyTransport(SyncConnectionPool):
     def _connect_to_proxy(self, origin, timeout):
         scheme, hostname, port = origin
 
-        ssl_context = self.ssl_context if scheme == b'https' else None
+        ssl_context = self._ssl_context if scheme == b'https' else None
         host = hostname.decode('ascii')  # ?
 
         timeout = {} if timeout is None else timeout

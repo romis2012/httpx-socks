@@ -20,7 +20,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
                  username=None, password=None, rdns=None,
                  http2=False, ssl_context=None, verify=True, cert=None,
                  trust_env=True,
-                 loop=None):
+                 loop=None, **kwargs):
 
         self._loop = loop
         self._proxy_type = proxy_type
@@ -36,10 +36,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
                 trust_env=trust_env, http2=http2
             ).ssl_context
 
-        self.ssl_context = ssl_context
-        self.http2 = http2
-
-        super().__init__(http2=http2, ssl_context=ssl_context)
+        super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
     async def request(self, method, url, headers=None, stream=None,
                       timeout=None):
@@ -52,8 +49,8 @@ class AsyncProxyTransport(AsyncConnectionPool):
                                                   timeout=timeout)
             connection = AsyncHTTPConnection(
                 origin=origin,
-                http2=self.http2,
-                ssl_context=self.ssl_context,
+                http2=self._http2,
+                ssl_context=self._ssl_context,
                 socket=socket
             )
             await self._add_to_pool(connection)
@@ -65,7 +62,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
     async def _connect_to_proxy(self, origin, timeout):
         scheme, hostname, port = origin
 
-        ssl_context = self.ssl_context if scheme == b'https' else None
+        ssl_context = self._ssl_context if scheme == b'https' else None
         host = hostname.decode('ascii')  # ?
 
         timeout = {} if timeout is None else timeout
@@ -85,7 +82,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
             if self._loop is None:
                 self._loop = asyncio.get_event_loop()
 
-            from .core_socks.asyn.asyncio import Proxy
+            from .core_socks.async_.asyncio import Proxy
 
             proxy = Proxy.create(
                 loop=self._loop,
@@ -112,7 +109,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
             )
 
         elif backend == 'trio':
-            from .core_socks.asyn.trio import Proxy
+            from .core_socks.async_.trio import Proxy
 
             proxy = Proxy.create(
                 proxy_type=self._proxy_type,
