@@ -8,7 +8,6 @@ from ._errors import ProxyError
 
 
 class SocketStream(AsyncSocketStream):
-
     _loop: asyncio.AbstractEventLoop = None
     _socket = None
 
@@ -44,7 +43,7 @@ class SocketStream(AsyncSocketStream):
             elif isinstance(item, (bytearray, bytes)):
                 data += item
             else:
-                raise ValueError('Unsupported ' # pragma: no cover
+                raise ValueError('Unsupported '  # pragma: no cover
                                  'request type')
         await self._loop.sock_sendall(self._socket, data)
 
@@ -59,7 +58,7 @@ class SocketStream(AsyncSocketStream):
         while len(data) < n:
             packet = await self._loop.sock_recv(self._socket, n - len(data))
             if not packet:
-                raise ProxyError('Connection closed ' # pragma: no cover
+                raise ProxyError('Connection closed '  # pragma: no cover
                                  'unexpectedly')
             data += packet
         return data
@@ -69,7 +68,7 @@ class SocketStream(AsyncSocketStream):
         while True:
             packet = await self._loop.sock_recv(self._socket, buff_size)
             if not packet:
-                raise ProxyError('Connection closed ' # pragma: no cover
+                raise ProxyError('Connection closed '  # pragma: no cover
                                  'unexpectedly')
             data += packet
             if len(packet) < buff_size:
