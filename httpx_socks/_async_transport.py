@@ -1,13 +1,7 @@
-import asyncio
-import trio
 import sniffio
 
 from httpcore import AsyncConnectionPool
 from httpcore._async.connection import AsyncHTTPConnection  # noqa
-from httpcore._backends.asyncio import (SocketStream  # noqa
-                                        as AsyncioSocketStream)
-from httpcore._backends.trio import (SocketStream  # noqa
-                                     as TrioSocketStream)
 from httpcore._utils import url_to_origin  # noqa
 from httpx._config import SSLConfig  # noqa
 
@@ -79,10 +73,13 @@ class AsyncProxyTransport(AsyncConnectionPool):
         backend = sniffio.current_async_library()
 
         if backend == 'asyncio':
+
+            import asyncio
+            from httpcore._backends.asyncio import SocketStream  # noqa
+            from .core_socks.async_.asyncio import Proxy
+
             if self._loop is None:
                 self._loop = asyncio.get_event_loop()
-
-            from .core_socks.async_.asyncio import Proxy
 
             proxy = Proxy.create(
                 loop=self._loop,
@@ -104,11 +101,14 @@ class AsyncProxyTransport(AsyncConnectionPool):
                 ssl=ssl_context,
                 server_hostname=host if ssl_context else None,
             )
-            return AsyncioSocketStream(
+            return SocketStream(
                 stream_reader=stream_reader, stream_writer=stream_writer
             )
 
         elif backend == 'trio':
+
+            import trio
+            from httpcore._backends.trio import SocketStream  # noqa
             from .core_socks.async_.trio import Proxy
 
             proxy = Proxy.create(
@@ -131,7 +131,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
                 )
                 await stream.do_handshake()
 
-            return TrioSocketStream(
+            return SocketStream(
                 stream=stream
             )
 
