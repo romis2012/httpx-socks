@@ -14,8 +14,8 @@ class Resolver(AsyncResolver):
             family=family, type=socket.SOCK_STREAM)
 
         if not infos:
-            raise OSError('Can`t resolve address {}:{} [{}]'.format(
-                host, port, family))
+            raise OSError('Can`t resolve address '  # pragma: no cover
+                          '{}:{} [{}]'.format(host, port, family))
 
         infos = sorted(infos, key=lambda info: info[0])
 

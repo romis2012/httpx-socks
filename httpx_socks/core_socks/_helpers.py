@@ -24,14 +24,14 @@ _ipv6_regexb = re.compile(_ipv6_pattern.encode('ascii'), flags=re.IGNORECASE)
 
 
 def _is_ip_address(regex, regexb, host):
-    if host is None:
-        return False
+    # if host is None:
+    #     return False
     if isinstance(host, str):
         return bool(regex.match(host))
     elif isinstance(host, (bytes, bytearray, memoryview)):
         return bool(regexb.match(host))
     else:
-        raise TypeError("{} [{}] is not a str or bytes"
+        raise TypeError('{} [{}] is not a str or bytes'  # pragma: no cover
                         .format(host, type(host)))
 
 

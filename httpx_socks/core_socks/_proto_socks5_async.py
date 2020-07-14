@@ -59,13 +59,12 @@ class Socks5Proto:
                 'Unexpected SOCKS version number: {}'.format(ver))
 
         if auth_method == SOCKS5_AUTH_NO_ACCEPTABLE_METHODS:
-            raise ProxyError(
-                'No acceptable authentication methods were offered')
+            raise ProxyError('No acceptable '  # pragma: no cover
+                             'authentication methods were offered')
 
         if auth_method not in auth_methods:
-            raise ProxyError(
-                'Unexpected SOCKS authentication method: {}'.format(
-                    auth_method))
+            raise ProxyError('Unexpected SOCKS '  # pragma: no cover
+                             'authentication method: {}'.format(auth_method))
 
         # authenticate
         if auth_method == SOCKS5_AUTH_UNAME_PWD:
@@ -82,10 +81,11 @@ class Socks5Proto:
             ver, status = await self._stream.read_exact(2)
 
             if ver != 0x01:
-                raise ProxyError('Invalid authentication response')
+                raise ProxyError('Invalid '  # pragma: no cover
+                                 'authentication response')
 
             if status != SOCKS5_GRANTED:
-                raise ProxyError('Username and password '
+                raise ProxyError('Username and password '  # pragma: no cover
                                  'authentication failure')
 
     async def _socks_connect(self):
@@ -97,14 +97,16 @@ class Socks5Proto:
         ver, err_code, reserved = await self._stream.read_exact(3)
 
         if ver != SOCKS_VER5:
-            raise ProxyError('Unexpected SOCKS version number: {}'.format(ver))
+            raise ProxyError('Unexpected SOCKS '  # pragma: no cover
+                             'version number: {}'.format(ver))
 
         if err_code != NULL:
             raise ProxyError(SOCKS5_ERRORS.get(err_code, 'Unknown error'),
                              err_code)
 
         if reserved != RSV:
-            raise ProxyError('The reserved byte must be 0x00')
+            raise ProxyError('The reserved byte '  # pragma: no cover
+                             'must be 0x00')
 
         # read all available data (bind address)
         await self._stream.read_all()

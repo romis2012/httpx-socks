@@ -50,7 +50,8 @@ class Proxy:
                 password=password
             )
 
-        raise ValueError('Invalid proxy type: %s' % proxy_type)
+        raise ValueError('Invalid proxy type: %s'  # pragma: no cover
+                         % proxy_type)
 
     @classmethod
     def from_url(cls, url: str, **kwargs) -> AsyncProxy:
@@ -141,7 +142,7 @@ class BaseProxy(AsyncProxy):
         await proto.negotiate()
 
     def _create_proto(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @property
     def proxy_host(self):

@@ -4,6 +4,7 @@ from ._types import ProxyType
 from ._errors import ProxyConnectionError, ProxyTimeoutError
 from ._helpers import parse_proxy_url
 
+from ._proxy_async import AsyncProxy
 from ._stream_async_trio import SocketStream
 from ._proto_socks5_async import Socks5Proto
 from ._proto_http_async import HttpProto
@@ -41,7 +42,8 @@ class Proxy:
                 password=password
             )
 
-        raise ValueError('Invalid proxy type: %s' % proxy_type)
+        raise ValueError('Invalid proxy type: %s'  # pragma: no cover
+                         % proxy_type)
 
     @classmethod
     def from_url(cls, url: str, **kwargs) -> 'BaseProxy':
@@ -56,7 +58,7 @@ class Proxy:
         )
 
 
-class BaseProxy:
+class BaseProxy(AsyncProxy):
     def __init__(self, proxy_host, proxy_port):
         self._proxy_host = proxy_host
         self._proxy_port = proxy_port
@@ -68,6 +70,9 @@ class BaseProxy:
         self._stream = SocketStream()
 
     async def connect(self, dest_host, dest_port, timeout=None, _socket=None):
+        if timeout is None:
+            timeout = 5
+
         self._dest_host = dest_host
         self._dest_port = dest_port
         self._timeout = timeout
@@ -105,14 +110,14 @@ class BaseProxy:
         await proto.negotiate()
 
     def _create_proto(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @property
-    def _host(self):
+    def proxy_host(self):
         return self._proxy_host
 
     @property
-    def _port(self):
+    def proxy_port(self):
         return self._proxy_port
 
 

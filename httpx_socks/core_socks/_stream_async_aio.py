@@ -44,7 +44,8 @@ class SocketStream(AsyncSocketStream):
             elif isinstance(item, (bytearray, bytes)):
                 data += item
             else:
-                raise ValueError('Unsupported request type')
+                raise ValueError('Unsupported ' # pragma: no cover
+                                 'request type')
         await self._loop.sock_sendall(self._socket, data)
 
     async def write_all(self, data):
@@ -58,7 +59,8 @@ class SocketStream(AsyncSocketStream):
         while len(data) < n:
             packet = await self._loop.sock_recv(self._socket, n - len(data))
             if not packet:
-                raise ProxyError('Connection closed unexpectedly')
+                raise ProxyError('Connection closed ' # pragma: no cover
+                                 'unexpectedly')
             data += packet
         return data
 
@@ -67,8 +69,8 @@ class SocketStream(AsyncSocketStream):
         while True:
             packet = await self._loop.sock_recv(self._socket, buff_size)
             if not packet:
-                # break
-                raise ProxyError('Connection closed unexpectedly')
+                raise ProxyError('Connection closed ' # pragma: no cover
+                                 'unexpectedly')
             data += packet
             if len(packet) < buff_size:
                 break

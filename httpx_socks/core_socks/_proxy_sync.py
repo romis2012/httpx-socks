@@ -12,15 +12,15 @@ from ._proto_socks4_sync import Socks4Proto
 
 class SyncProxy:
     def connect(self, dest_host, dest_port, timeout=None, _socket=None):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @property
     def proxy_host(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @property
     def proxy_port(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
 
 class Proxy:
@@ -54,7 +54,8 @@ class Proxy:
                 password=password
             )
 
-        raise ValueError('Invalid proxy type: %s' % proxy_type)
+        raise ValueError('Invalid proxy type: '  # pragma: no cover
+                         '{}'.format(proxy_type))
 
     @classmethod
     def from_url(cls, url: str, **kwargs) -> SyncProxy:
@@ -115,7 +116,7 @@ class BaseProxy(SyncProxy):
         proto.negotiate()
 
     def _create_proto(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @property
     def proxy_host(self):
