@@ -2,3 +2,11 @@
 omit =
 #    */_proxy_chain_*.py
     httpx_socks/core_socks/_basic_auth.py
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    raise NotImplementedError
+    raise ValueError

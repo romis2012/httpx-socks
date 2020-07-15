@@ -4,6 +4,8 @@ from ._resolver_sync import SyncResolver
 from ._helpers import is_ipv4_address, is_ipv6_address
 from ._errors import ProxyError
 
+DEFAULT_RECEIVE_SIZE = 65536
+
 
 class SyncSocketStream:
     _socket = None
@@ -45,7 +47,9 @@ class SyncSocketStream:
     def write_all(self, data):
         self._socket.sendall(data)
 
-    def read(self, max_bytes):
+    def read(self, max_bytes=None):
+        if max_bytes is None:
+            max_bytes = DEFAULT_RECEIVE_SIZE
         return self._socket.recv(max_bytes)
 
     def read_exact(self, n):
@@ -56,18 +60,6 @@ class SyncSocketStream:
                 raise ProxyError('Connection closed '  # pragma: no cover
                                  'unexpectedly')
             data += packet
-        return data
-
-    def read_all(self, buff_size=4096):
-        data = bytearray()
-        while True:
-            packet = self._socket.recv(buff_size)
-            if not packet:
-                raise ProxyError('Connection closed '  # pragma: no cover
-                                 'unexpectedly')
-            data += packet
-            if len(packet) < buff_size:
-                break
         return data
 
     @property

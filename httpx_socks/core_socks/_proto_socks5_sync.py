@@ -108,7 +108,7 @@ class Socks5Proto:
                              'must be 0x00')
 
         # read all available data (bind address)
-        self._stream.read_all()
+        self._stream.read()
 
     def _build_addr_request(self):
         host = self._dest_host

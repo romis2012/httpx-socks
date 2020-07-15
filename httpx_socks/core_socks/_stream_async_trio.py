@@ -1,6 +1,6 @@
 import trio
 
-from ._stream_async import AsyncSocketStream
+from ._stream_async import AsyncSocketStream, DEFAULT_RECEIVE_SIZE
 from ._resolver_async_trio import Resolver
 from ._helpers import is_ipv4_address, is_ipv6_address
 from ._errors import ProxyError
@@ -49,7 +49,9 @@ class SocketStream(AsyncSocketStream):
             sent = await self._socket.send(remaining)
             total_sent += sent
 
-    async def read(self, max_bytes):
+    async def read(self, max_bytes=None):
+        if max_bytes is None:
+            max_bytes = DEFAULT_RECEIVE_SIZE
         return await self._socket.recv(max_bytes)
 
     async def read_exact(self, n):
@@ -60,18 +62,6 @@ class SocketStream(AsyncSocketStream):
                 raise ProxyError('Connection closed '  # pragma: no cover
                                  'unexpectedly')
             data += packet
-        return data
-
-    async def read_all(self, buff_size=4096):
-        data = bytearray()
-        while True:
-            packet = await self._socket.recv(buff_size)
-            if not packet:
-                raise ProxyError('Connection closed '  # pragma: no cover
-                                 'unexpectedly')
-            data += packet
-            if len(packet) < buff_size:
-                break
         return data
 
     @property

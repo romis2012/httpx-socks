@@ -37,7 +37,7 @@ class HttpProto:
 
         await self._stream.write_all(data)
 
-        res = await self._stream.read_all()
+        res = await self._stream.read()
 
         if not res:
             raise ProxyError('Invalid proxy response')  # pragma: no cover'

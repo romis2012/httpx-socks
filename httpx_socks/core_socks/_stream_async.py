@@ -1,5 +1,7 @@
 from ._resolver_async import AsyncResolver
 
+DEFAULT_RECEIVE_SIZE = 65536
+
 
 class AsyncSocketStream:
 
@@ -15,13 +17,10 @@ class AsyncSocketStream:
     async def write_all(self, data):
         raise NotImplementedError()  # pragma: no cover
 
-    async def read(self, max_bytes):
+    async def read(self, max_bytes=None):
         raise NotImplementedError()  # pragma: no cover
 
     async def read_exact(self, n):
-        raise NotImplementedError()  # pragma: no cover
-
-    async def read_all(self, buff_size=4096):
         raise NotImplementedError()  # pragma: no cover
 
     @property

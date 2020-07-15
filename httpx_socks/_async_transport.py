@@ -135,8 +135,9 @@ class AsyncProxyTransport(AsyncConnectionPool):
                 stream=stream
             )
 
-        else:  # pragma: nocover
-            raise RuntimeError(f'Unsupported concurrency backend {backend!r}')
+        else:
+            raise RuntimeError(f'Unsupported '  # pragma: no cover
+                               f'concurrency backend {backend!r}')
 
     @classmethod
     def from_url(cls, url, **kwargs):
