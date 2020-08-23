@@ -1,7 +1,5 @@
-import httpcore
 import httpx
-# noinspection PyPackageRequirements
-import pytest
+import pytest  # noqa
 
 from httpx_socks import (
     ProxyType,
@@ -57,8 +55,8 @@ async def test_socks5_proxy_with_read_timeout():
         username=LOGIN,
         password=PASSWORD,
     )
-    timeout = httpx.Timeout(2, connect_timeout=32)
-    with pytest.raises(httpcore.ReadTimeout):
+    timeout = httpx.Timeout(2, connect=32)
+    with pytest.raises(httpx.ReadTimeout):
         async with httpx.AsyncClient(transport=transport,
                                      timeout=timeout) as client:
             await client.get(HTTP_URL_DELAY_3_SEC)
@@ -73,7 +71,7 @@ async def test_socks5_proxy_with_connect_timeout():
         username=LOGIN,
         password=PASSWORD,
     )
-    timeout = httpx.Timeout(32, connect_timeout=0.001)
+    timeout = httpx.Timeout(32, connect=0.001)
     with pytest.raises(ProxyTimeoutError):
         async with httpx.AsyncClient(transport=transport,
                                      timeout=timeout) as client:

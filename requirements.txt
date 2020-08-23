@@ -1,5 +1,5 @@
-httpx==0.13.3
-httpcore==0.9.1
+httpx==0.14.1
+httpcore==0.10.2
 async-timeout>=3.0.1
 trio>=0.16.0
 sniffio>=1.1.0
