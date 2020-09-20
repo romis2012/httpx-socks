@@ -5,7 +5,7 @@ from httpcore._async.connection import AsyncHTTPConnection  # noqa
 from httpcore._utils import url_to_origin  # noqa
 from httpx._config import SSLConfig  # noqa
 
-from .core_socks import ProxyType, parse_proxy_url
+from python_socks import ProxyType, parse_proxy_url
 
 
 class AsyncProxyTransport(AsyncConnectionPool):
@@ -76,7 +76,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
 
             import asyncio
             from httpcore._backends.asyncio import SocketStream  # noqa
-            from .core_socks.async_.asyncio import Proxy
+            from python_socks.async_.asyncio import Proxy
 
             if self._loop is None:
                 self._loop = asyncio.get_event_loop()
@@ -109,7 +109,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
 
             import trio
             from httpcore._backends.trio import SocketStream  # noqa
-            from .core_socks.async_.trio import Proxy
+            from python_socks.async_.trio import Proxy
 
             proxy = Proxy.create(
                 proxy_type=self._proxy_type,

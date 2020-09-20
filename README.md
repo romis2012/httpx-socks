@@ -4,14 +4,15 @@
 [![Coverage Status](https://coveralls.io/repos/github/romis2012/httpx-socks/badge.svg?branch=master&_=x)](https://coveralls.io/github/romis2012/httpx-socks?branch=master)
 [![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://badge.fury.io/py/httpx-socks)
 
-Proxy transports for [httpx](https://github.com/encode/httpx) client. 
+The `httpx-socks` package provides proxy transports for [httpx](https://github.com/encode/httpx) client. 
 SOCKS4(a), SOCKS5, HTTP (tunneling) proxy supported.
+It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy functionality.
 
 
 ## Requirements
 - Python >= 3.6
 - httpx >= 0.13.3
-- async-timeout>=3.0.1
+- python-socks[asyncio,trio] >= 1.0.1
 
 ## Installation
 ```

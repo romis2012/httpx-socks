@@ -34,17 +34,10 @@ setup(
     description='Proxy (HTTP, SOCKS) transports for httpx',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    packages=[
-        'httpx_socks',
-        'httpx_socks.core_socks',
-        'httpx_socks.core_socks.sync',
-        'httpx_socks.core_socks.async_',
-        'httpx_socks.core_socks.async_.asyncio',
-        'httpx_socks.core_socks.async_.trio',
-    ],
+    packages=['httpx_socks'],
     keywords='httpx asyncio socks socks5 socks4 http proxy',
     install_requires=[
-        'httpx>=0.14.1',
-        'async-timeout>=3.0.1',
+        'httpx>=0.14.3',
+        'python-socks[asyncio,trio]>=1.0.1',
     ],
 )
