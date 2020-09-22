@@ -92,9 +92,8 @@ class AsyncProxyTransport(AsyncConnectionPool):
             )
 
             sock = await proxy.connect(host, port, timeout=connect_timeout)
-            # noinspection PyTypeChecker
+
             stream_reader, stream_writer = await asyncio.open_connection(
-                loop=self._loop,
                 host=None,
                 port=None,
                 sock=sock,
