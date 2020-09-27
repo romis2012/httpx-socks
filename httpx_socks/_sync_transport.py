@@ -30,31 +30,42 @@ class SyncProxyTransport(SyncConnectionPool):
 
         super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
-    def request(self, method, url, headers=None, stream=None, timeout=None):
+    def request(self, method, url, headers=None, stream=None, ext=None):
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
 
+        ext = {} if ext is None else ext
+        timeout = ext.get('timeout', {})
+        connect_timeout = timeout.get('connect')
+
         if connection is None:
-            socket = self._connect_to_proxy(origin=origin, timeout=timeout)
+            socket = self._connect_to_proxy(
+                origin=origin,
+                connect_timeout=connect_timeout
+            )
             connection = SyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=socket,
             )
-            self._add_to_pool(connection)
+            self._add_to_pool(connection=connection, timeout=timeout)
 
-        response = connection.request(method, url, headers, stream, timeout)
+        response = connection.request(
+            method=method,
+            url=url,
+            headers=headers,
+            stream=stream,
+            ext=ext
+        )
+
         return response
 
-    def _connect_to_proxy(self, origin, timeout):
+    def _connect_to_proxy(self, origin, connect_timeout):
         scheme, hostname, port = origin
 
         ssl_context = self._ssl_context if scheme == b'https' else None
         host = hostname.decode('ascii')  # ?
-
-        timeout = {} if timeout is None else timeout
-        connect_timeout = timeout.get('connect')
 
         proxy = Proxy.create(
             proxy_type=self._proxy_type,

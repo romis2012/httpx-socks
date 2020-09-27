@@ -32,35 +32,43 @@ class AsyncProxyTransport(AsyncConnectionPool):
 
         super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
-    async def request(self, method, url, headers=None, stream=None,
-                      timeout=None):
+    async def arequest(self, method, url, headers=None, stream=None,
+                       ext=None):
 
         origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
 
+        ext = {} if ext is None else ext
+        timeout = ext.get('timeout', {})
+        connect_timeout = timeout.get('connect')
+
         if connection is None:
-            socket = await self._connect_to_proxy(origin=origin,
-                                                  timeout=timeout)
+            socket = await self._connect_to_proxy(
+                origin=origin,
+                connect_timeout=connect_timeout
+            )
             connection = AsyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
                 ssl_context=self._ssl_context,
                 socket=socket
             )
-            await self._add_to_pool(connection)
+            await self._add_to_pool(connection=connection, timeout=timeout)
 
-        response = await connection.request(method, url, headers, stream,
-                                            timeout)
+        response = await connection.arequest(
+            method=method,
+            url=url,
+            headers=headers,
+            stream=stream,
+            ext=ext
+        )
         return response
 
-    async def _connect_to_proxy(self, origin, timeout):
+    async def _connect_to_proxy(self, origin, connect_timeout):
         scheme, hostname, port = origin
 
         ssl_context = self._ssl_context if scheme == b'https' else None
         host = hostname.decode('ascii')  # ?
-
-        timeout = {} if timeout is None else timeout
-        connect_timeout = timeout.get('connect')
 
         return await self._open_stream(
             host=host,
