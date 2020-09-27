@@ -3,3 +3,4 @@ httpcore>=0.11.0
 async-timeout>=3.0.1
 trio>=0.16.0
 sniffio>=1.1.0
+curio>=1.4

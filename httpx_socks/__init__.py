@@ -1,5 +1,5 @@
 __title__ = 'httpx-socks'
-__version__ = '0.2.10'
+__version__ = '0.3.0'
 
 from python_socks import (
     ProxyError,

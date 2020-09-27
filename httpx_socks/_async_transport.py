@@ -81,70 +81,124 @@ class AsyncProxyTransport(AsyncConnectionPool):
         backend = sniffio.current_async_library()
 
         if backend == 'asyncio':
-
-            import asyncio
-            from httpcore._backends.asyncio import SocketStream  # noqa
-            from python_socks.async_.asyncio import Proxy
-
-            if self._loop is None:
-                self._loop = asyncio.get_event_loop()
-
-            proxy = Proxy.create(
-                loop=self._loop,
-                proxy_type=self._proxy_type,
-                host=self._proxy_host,
-                port=self._proxy_port,
-                username=self._username,
-                password=self._password,
-                rdns=self._rdns
+            return await self._open_aio_stream(
+                host,
+                port,
+                connect_timeout,
+                ssl_context
             )
 
-            sock = await proxy.connect(host, port, timeout=connect_timeout)
-
-            stream_reader, stream_writer = await asyncio.open_connection(
-                host=None,
-                port=None,
-                sock=sock,
-                ssl=ssl_context,
-                server_hostname=host if ssl_context else None,
-            )
-            return SocketStream(
-                stream_reader=stream_reader, stream_writer=stream_writer
+        if backend == 'trio':
+            return await self._open_trio_stream(
+                host,
+                port,
+                connect_timeout,
+                ssl_context
             )
 
-        elif backend == 'trio':
-
-            import trio
-            from httpcore._backends.trio import SocketStream  # noqa
-            from python_socks.async_.trio import Proxy
-
-            proxy = Proxy.create(
-                proxy_type=self._proxy_type,
-                host=self._proxy_host,
-                port=self._proxy_port,
-                username=self._username,
-                password=self._password,
-                rdns=self._rdns
+        if backend == 'curio':
+            return await self._open_curio_stream(
+                host,
+                port,
+                connect_timeout,
+                ssl_context
             )
 
-            sock = await proxy.connect(host, port, timeout=connect_timeout)
+        raise RuntimeError(f'Unsupported '  # pragma: no cover
+                           f'concurrency backend {backend!r}')
 
-            stream = trio.SocketStream(sock)
+    async def _open_aio_stream(self, host, port, connect_timeout,
+                               ssl_context):
+        import asyncio
+        from httpcore._backends.asyncio import SocketStream  # noqa
+        from python_socks.async_.asyncio import Proxy
 
-            if ssl_context is not None:
-                stream = trio.SSLStream(
-                    stream, ssl_context,
+        if self._loop is None:
+            self._loop = asyncio.get_event_loop()
+
+        proxy = Proxy.create(
+            loop=self._loop,
+            proxy_type=self._proxy_type,
+            host=self._proxy_host,
+            port=self._proxy_port,
+            username=self._username,
+            password=self._password,
+            rdns=self._rdns
+        )
+
+        sock = await proxy.connect(host, port, timeout=connect_timeout)
+
+        stream_reader, stream_writer = await asyncio.open_connection(
+            host=None,
+            port=None,
+            sock=sock,
+            ssl=ssl_context,
+            server_hostname=host if ssl_context else None,
+        )
+        return SocketStream(
+            stream_reader=stream_reader, stream_writer=stream_writer
+        )
+
+    async def _open_trio_stream(self, host, port, connect_timeout,
+                                ssl_context):
+        import trio
+        from httpcore._backends.trio import SocketStream  # noqa
+        from python_socks.async_.trio import Proxy
+
+        proxy = Proxy.create(
+            proxy_type=self._proxy_type,
+            host=self._proxy_host,
+            port=self._proxy_port,
+            username=self._username,
+            password=self._password,
+            rdns=self._rdns
+        )
+
+        sock = await proxy.connect(host, port, timeout=connect_timeout)
+
+        stream = trio.SocketStream(sock)
+
+        if ssl_context is not None:
+            stream = trio.SSLStream(
+                stream, ssl_context,
+                server_hostname=host
+            )
+            await stream.do_handshake()
+
+        return SocketStream(
+            stream=stream
+        )
+
+    async def _open_curio_stream(self, host, port, connect_timeout,
+                                 ssl_context):
+        import curio.io
+        from httpcore._backends.curio import SocketStream  # noqa
+        from python_socks.async_.curio import Proxy
+
+        proxy = Proxy.create(
+            proxy_type=self._proxy_type,
+            host=self._proxy_host,
+            port=self._proxy_port,
+            username=self._username,
+            password=self._password,
+            rdns=self._rdns
+        )
+
+        sock = await proxy.connect(host, port, timeout=connect_timeout)
+
+        if ssl_context is not None:
+            sock = curio.io.Socket(
+                ssl_context.wrap_socket(
+                    sock._socket,  # noqa
+                    do_handshake_on_connect=False,
                     server_hostname=host
                 )
-                await stream.do_handshake()
-
-            return SocketStream(
-                stream=stream
             )
+            await sock.do_handshake()
 
-        else:
-            raise RuntimeError(f'Unsupported '  # pragma: no cover
-                               f'concurrency backend {backend!r}')
+        return SocketStream(
+            socket=sock
+        )
 
     @classmethod
     def from_url(cls, url, **kwargs):
