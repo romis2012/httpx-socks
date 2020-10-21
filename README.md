@@ -15,8 +15,25 @@ It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy
 - python-socks[asyncio,trio,curio] >= 1.1.0
 
 ## Installation
+
+only sync proxy support:
 ```
 pip install httpx-socks
+```
+
+to include optional asyncio support (it requires async-timeout):
+```
+pip install httpx-socks[asyncio]
+```
+
+to include optional trio support:
+```
+pip install httpx-socks[trio]
+```
+
+to include optional curio support:
+```
+pip install httpx-socks[curio]
 ```
 
 ## Usage

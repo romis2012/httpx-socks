@@ -38,6 +38,11 @@ setup(
     keywords='httpx asyncio socks socks5 socks4 http proxy',
     install_requires=[
         'httpx>=0.15.4',
-        'python-socks[asyncio,trio,curio]>=1.1.0',
+        'python-socks>=1.1.0',
     ],
+    extras_require={
+        'asyncio': ['async-timeout>=3.0.1'],
+        'trio': ['trio>=0.16.0'],
+        'curio': ['curio>=1.4'],
+    }
 )
