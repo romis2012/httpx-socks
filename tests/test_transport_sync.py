@@ -1,5 +1,8 @@
+import ssl
+
 import httpx
 import pytest  # noqa
+from yarl import URL  # noqa
 
 from httpx_socks import (
     ProxyType,
@@ -8,104 +11,125 @@ from httpx_socks import (
     ProxyConnectionError,
     ProxyTimeoutError,
 )
-from tests.conftest import (
-    SOCKS5_IPV4_HOST, SOCKS5_IPV4_PORT,
-    LOGIN, PASSWORD, SKIP_IPV6_TESTS, SOCKS5_IPV4_URL, SOCKS5_IPV6_URL,
-    SOCKS4_URL,
-    HTTP_PROXY_URL)
-
-# HTTP_TEST_URL = 'http://httpbin.org/ip'
-# HTTPS_TEST_URL = 'https://httpbin.org/ip'
-HTTP_TEST_URL = 'http://check-host.net/ip'
-HTTPS_TEST_URL = 'https://check-host.net/ip'
-
-HTTP_URL_DELAY_3_SEC = 'http://httpbin.org/delay/3'
-HTTP_URL_REDIRECT = 'http://httpbin.org/redirect/1'
+from tests.config import (
+    TEST_HOST_PEM_FILE, TEST_URL_IPV4, TEST_URL_IPV4_HTTPS, SOCKS5_IPV4_URL,
+    LOGIN, PASSWORD, PROXY_HOST_IPV4, SOCKS5_PROXY_PORT, TEST_URL_IPV4_DELAY,
+    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL,
+)
 
 
-@pytest.mark.parametrize('url', (HTTP_TEST_URL, HTTPS_TEST_URL))
+def create_ssl_context(url):
+    parsed_url = URL(url)
+    if parsed_url.scheme == 'https':
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        ssl_context.load_verify_locations(TEST_HOST_PEM_FILE)
+        return ssl_context
+    else:
+        return None
+
+
+def fetch(transport: SyncProxyTransport,
+          url: str, timeout: httpx.Timeout = None):
+    with httpx.Client(transport=transport) as client:
+        res = client.get(url=url, timeout=timeout)
+        return res
+
+
+@pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
 @pytest.mark.parametrize('rdns', (True, False))
 def test_socks5_proxy_ipv4(url, rdns):
-    transport = SyncProxyTransport.from_url(SOCKS5_IPV4_URL, rdns=rdns)
-    with httpx.Client(transport=transport) as client:
-        resp = client.get(url)
-        assert resp.status_code == 200
+    transport = SyncProxyTransport.from_url(
+        SOCKS5_IPV4_URL,
+        rdns=rdns,
+        verify=create_ssl_context(url)
+    )
+    res = fetch(transport=transport, url=url)
+    assert res.status_code == 200
 
 
-def test_socks5_proxy_with_invalid_credentials():
+def test_socks5_proxy_with_invalid_credentials(url=TEST_URL_IPV4):
     transport = SyncProxyTransport(
         proxy_type=ProxyType.SOCKS5,
-        proxy_host=SOCKS5_IPV4_HOST,
-        proxy_port=SOCKS5_IPV4_PORT,
+        proxy_host=PROXY_HOST_IPV4,
+        proxy_port=SOCKS5_PROXY_PORT,
         username=LOGIN,
         password=PASSWORD + 'aaa',
+        verify=create_ssl_context(url)
     )
     with pytest.raises(ProxyError):
-        with httpx.Client(transport=transport) as client:
-            client.get(HTTP_TEST_URL)
+        fetch(transport=transport, url=url)
 
 
-def test_socks5_proxy_with_read_timeout():
+def test_socks5_proxy_with_read_timeout(url=TEST_URL_IPV4_DELAY):
     transport = SyncProxyTransport(
         proxy_type=ProxyType.SOCKS5,
-        proxy_host=SOCKS5_IPV4_HOST,
-        proxy_port=SOCKS5_IPV4_PORT,
+        proxy_host=PROXY_HOST_IPV4,
+        proxy_port=SOCKS5_PROXY_PORT,
         username=LOGIN,
         password=PASSWORD,
+        verify=create_ssl_context(url)
     )
     timeout = httpx.Timeout(2, connect=32)
     with pytest.raises(httpx.ReadTimeout):
-        with httpx.Client(transport=transport, timeout=timeout) as client:
-            client.get(HTTP_URL_DELAY_3_SEC)
+        fetch(transport=transport, url=url, timeout=timeout)
 
 
-def test_socks5_proxy_with_connect_timeout():
+def test_socks5_proxy_with_connect_timeout(url=TEST_URL_IPV4):
     transport = SyncProxyTransport(
         proxy_type=ProxyType.SOCKS5,
-        proxy_host=SOCKS5_IPV4_HOST,
-        proxy_port=SOCKS5_IPV4_PORT,
+        proxy_host=PROXY_HOST_IPV4,
+        proxy_port=SOCKS5_PROXY_PORT,
         username=LOGIN,
         password=PASSWORD,
+        verify=create_ssl_context(url)
     )
     timeout = httpx.Timeout(32, connect=0.001)
     with pytest.raises(ProxyTimeoutError):
-        with httpx.Client(transport=transport, timeout=timeout) as client:
-            client.get(HTTP_TEST_URL)
+        fetch(transport=transport, url=url, timeout=timeout)
 
 
-def test_socks5_proxy_with_invalid_proxy_port(unused_tcp_port):
+def test_socks5_proxy_with_invalid_proxy_port(unused_tcp_port,
+                                              url=TEST_URL_IPV4):
     transport = SyncProxyTransport(
         proxy_type=ProxyType.SOCKS5,
-        proxy_host=SOCKS5_IPV4_HOST,
+        proxy_host=PROXY_HOST_IPV4,
         proxy_port=unused_tcp_port,
         username=LOGIN,
         password=PASSWORD,
+        verify=create_ssl_context(url)
     )
     with pytest.raises(ProxyConnectionError):
-        with httpx.Client(transport=transport) as client:
-            client.get(HTTP_TEST_URL)
+        fetch(transport=transport, url=url)
 
 
-@pytest.mark.skipif(SKIP_IPV6_TESTS, reason='TravisCI doesn`t support ipv6')
-def test_socks5_proxy_ipv6():
-    transport = SyncProxyTransport.from_url(SOCKS5_IPV6_URL)
-    with httpx.Client(transport=transport) as client:
-        resp = client.get(HTTP_TEST_URL)
-        assert resp.status_code == 200
+@pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
+@pytest.mark.skipif(SKIP_IPV6_TESTS, reason="TravisCI doesn't support ipv6")
+def test_socks5_proxy_ipv6(url):
+    transport = SyncProxyTransport.from_url(
+        SOCKS5_IPV6_URL,
+        verify=create_ssl_context(url)
+    )
+    res = fetch(transport=transport, url=url)
+    assert res.status_code == 200
 
 
-@pytest.mark.parametrize('url', (HTTP_TEST_URL, HTTPS_TEST_URL))
+@pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
 @pytest.mark.parametrize('rdns', (True, False))
 def test_socks4_proxy(url, rdns):
-    transport = SyncProxyTransport.from_url(SOCKS4_URL, rdns=rdns, )
-    with httpx.Client(transport=transport) as client:
-        resp = client.get(url)
-        assert resp.status_code == 200
+    transport = SyncProxyTransport.from_url(
+        SOCKS4_URL, rdns=rdns,
+        verify=create_ssl_context(url)
+    )
+    res = fetch(transport=transport, url=url)
+    assert res.status_code == 200
 
 
-@pytest.mark.parametrize('url', (HTTP_TEST_URL, HTTPS_TEST_URL))
+@pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
 def test_http_proxy(url):
-    transport = SyncProxyTransport.from_url(HTTP_PROXY_URL)
-    with httpx.Client(transport=transport) as client:
-        resp = client.get(url)
-        assert resp.status_code == 200
+    transport = SyncProxyTransport.from_url(
+        HTTP_PROXY_URL,
+        verify=create_ssl_context(url)
+    )
+    res = fetch(transport=transport, url=url)
+    assert res.status_code == 200
