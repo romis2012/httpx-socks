@@ -103,8 +103,10 @@ def test_socks5_proxy_with_connect_timeout(url=TEST_URL_IPV4):
     curio.run(main)
 
 
-def test_socks5_proxy_with_invalid_proxy_port(unused_tcp_port,
-                                                    url=TEST_URL_IPV4):
+def test_socks5_proxy_with_invalid_proxy_port(
+        unused_tcp_port,
+        url=TEST_URL_IPV4):
+
     async def main():
         transport = AsyncProxyTransport(
             proxy_type=ProxyType.SOCKS5,

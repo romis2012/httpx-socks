@@ -80,7 +80,7 @@ TEST_URL_IPv6 = 'http://{host}:{port}/ip'.format(
     port=TEST_PORT_IPV6
 )
 
-TEST_URL_IPV4_DELAY = 'http://{host}:{port}/delay/2'.format(
+TEST_URL_IPV4_DELAY = 'http://{host}:{port}/delay/3'.format(
     host=TEST_HOST_NAME_IPV4,
     port=TEST_PORT_IPV4
 )
