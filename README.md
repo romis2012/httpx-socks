@@ -1,6 +1,6 @@
 # httpx-socks
 
-[![Build Status](https://travis-ci.org/romis2012/httpx-socks.svg?branch=master)](https://travis-ci.org/romis2012/httpx-socks)
+[![Build Status](https://api.travis-ci.com/romis2012/httpx-socks.svg?branch=master)](https://travis-ci.com/github/romis2012/httpx-socks)
 [![Coverage Status](https://coveralls.io/repos/github/romis2012/httpx-socks/badge.svg?branch=master&_=x)](https://coveralls.io/github/romis2012/httpx-socks?branch=master)
 [![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://badge.fury.io/py/httpx-socks)
 
