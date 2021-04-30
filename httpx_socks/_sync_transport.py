@@ -30,16 +30,17 @@ class SyncProxyTransport(SyncConnectionPool):
 
         super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
-    def request(self, method, url, headers=None, stream=None, ext=None):
+    def handle_request(self, method, url, headers=None, stream=None,
+                       extensions=None):
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
 
-        ext = {} if ext is None else ext
-        timeout = ext.get('timeout', {})
+        extensions = {} if extensions is None else extensions
+        timeout = extensions.get('timeout', {})
         connect_timeout = timeout.get('connect')
 
         if connection is None:
-            socket = self._connect_to_proxy(
+            socket = self._connect_via_proxy(
                 origin=origin,
                 connect_timeout=connect_timeout
             )
@@ -51,17 +52,17 @@ class SyncProxyTransport(SyncConnectionPool):
             )
             self._add_to_pool(connection=connection, timeout=timeout)
 
-        response = connection.request(
+        response = connection.handle_request(
             method=method,
             url=url,
             headers=headers,
             stream=stream,
-            ext=ext
+            extensions=extensions
         )
 
         return response
 
-    def _connect_to_proxy(self, origin, connect_timeout):
+    def _connect_via_proxy(self, origin, connect_timeout):
         scheme, hostname, port = origin
 
         ssl_context = self._ssl_context if scheme == b'https' else None

@@ -1,6 +1,6 @@
 python-socks>=1.1.0
-httpx>=0.16.0
-httpcore>=0.12.0
+httpx>=0.18.1
+httpcore>=0.13.2
 async-timeout>=3.0.1
 trio>=0.16.0
 sniffio>=1.1.0

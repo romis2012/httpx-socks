@@ -1,5 +1,6 @@
 import ssl
 
+import httpcore
 import httpx
 import pytest  # noqa
 from yarl import URL  # noqa
@@ -30,8 +31,11 @@ def create_ssl_context(url):
         return None
 
 
-async def fetch(transport: AsyncProxyTransport,
-                url: str, timeout: httpx.Timeout = None):
+async def fetch(
+        transport: AsyncProxyTransport,
+        url: str,
+        timeout: httpx.Timeout = None,
+):
     async with httpx.AsyncClient(transport=transport) as client:
         res = await client.get(url=url, timeout=timeout)
         return res
@@ -75,7 +79,7 @@ async def test_socks5_proxy_with_read_timeout(url=TEST_URL_IPV4_DELAY):
         verify=create_ssl_context(url)
     )
     timeout = httpx.Timeout(2, connect=32)
-    with pytest.raises(httpx.ReadTimeout):
+    with pytest.raises(httpcore.ReadTimeout):
         await fetch(transport=transport, url=url, timeout=timeout)
 
 

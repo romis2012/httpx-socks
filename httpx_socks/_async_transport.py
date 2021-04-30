@@ -32,18 +32,19 @@ class AsyncProxyTransport(AsyncConnectionPool):
 
         super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
 
-    async def arequest(self, method, url, headers=None, stream=None,
-                       ext=None):
+    async def handle_async_request(
+            self, method, url, headers=None,
+            stream=None, extensions=None):
 
         origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
 
-        ext = {} if ext is None else ext
-        timeout = ext.get('timeout', {})
+        extensions = {} if extensions is None else extensions
+        timeout = extensions.get('timeout', {})
         connect_timeout = timeout.get('connect')
 
         if connection is None:
-            socket = await self._connect_to_proxy(
+            socket = await self._connect_via_proxy(
                 origin=origin,
                 connect_timeout=connect_timeout
             )
@@ -55,16 +56,16 @@ class AsyncProxyTransport(AsyncConnectionPool):
             )
             await self._add_to_pool(connection=connection, timeout=timeout)
 
-        response = await connection.arequest(
+        response = await connection.handle_async_request(
             method=method,
             url=url,
             headers=headers,
             stream=stream,
-            ext=ext
+            extensions=extensions
         )
         return response
 
-    async def _connect_to_proxy(self, origin, connect_timeout):
+    async def _connect_via_proxy(self, origin, connect_timeout):
         scheme, hostname, port = origin
 
         ssl_context = self._ssl_context if scheme == b'https' else None
