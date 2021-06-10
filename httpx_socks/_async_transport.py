@@ -51,6 +51,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
             connection = AsyncHTTPConnection(
                 origin=origin,
                 http2=self._http2,
+                keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
                 socket=socket
             )
