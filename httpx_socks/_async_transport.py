@@ -1,20 +1,118 @@
 import sniffio
 
-from httpcore import AsyncConnectionPool
+import httpcore
 from httpcore._async.connection import AsyncHTTPConnection  # noqa
 from httpcore._utils import url_to_origin  # noqa
-from httpx._config import SSLConfig  # noqa
+
+from httpx import AsyncBaseTransport, Request, Response, AsyncByteStream
+from httpx._config import SSLConfig, DEFAULT_LIMITS, create_ssl_context  # noqa
 
 from python_socks import ProxyType, parse_proxy_url
 
 
-class AsyncProxyTransport(AsyncConnectionPool):
-    def __init__(self, *, proxy_type: ProxyType,
-                 proxy_host: str, proxy_port: int,
-                 username=None, password=None, rdns=None,
-                 http2=False, ssl_context=None, verify=True, cert=None,
-                 trust_env=True,
-                 loop=None, **kwargs):
+class AsyncResponseStream(AsyncByteStream):
+    def __init__(self, httpcore_stream: httpcore.AsyncByteStream):
+        self._httpcore_stream = httpcore_stream
+
+    async def __aiter__(self):
+        async for part in self._httpcore_stream:
+            yield part
+
+    async def aclose(self) -> None:
+        await self._httpcore_stream.aclose()
+
+
+class AsyncProxyTransport(AsyncBaseTransport):
+    def __init__(
+            self,
+            *,
+            proxy_type: ProxyType,
+            proxy_host: str,
+            proxy_port: int,
+            username=None,
+            password=None,
+            rdns=None,
+
+            verify=True,
+            cert=None,
+            trust_env: bool = True,
+            **kwargs
+    ):
+        ssl_context = create_ssl_context(
+            verify=verify,
+            cert=cert,
+            trust_env=trust_env,
+        )
+
+        self._pool = AsyncProxy(
+            proxy_type=proxy_type,
+            proxy_host=proxy_host,
+            proxy_port=proxy_port,
+            username=username,
+            password=password,
+            rdns=rdns,
+            ssl_context=ssl_context,
+            **kwargs
+        )
+
+    async def handle_async_request(self, request: Request) -> Response:
+        (
+            status_code,
+            headers,
+            byte_stream,
+            extensions
+        ) = await self._pool.handle_async_request(
+            method=request.method.encode("ascii"),
+            url=request.url.raw,
+            headers=request.headers.raw,
+            stream=httpcore.AsyncIteratorByteStream(
+                request.stream.__aiter__()),
+            extensions=request.extensions,
+        )
+
+        return Response(
+            status_code,
+            headers=headers,
+            stream=AsyncResponseStream(byte_stream),
+            extensions=extensions
+        )
+
+    @classmethod
+    def from_url(cls, url, **kwargs):
+        proxy_type, host, port, username, password = parse_proxy_url(url)
+        return cls(
+            proxy_type=proxy_type,
+            proxy_host=host,
+            proxy_port=port,
+            username=username,
+            password=password,
+            **kwargs
+        )
+
+    async def aclose(self) -> None:
+        await self._pool.aclose()  # pragma: no cover
+
+    async def __aenter__(self):
+        await self._pool.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type=None, exc_value=None, traceback=None):
+        await self._pool.__aexit__(exc_type, exc_value, traceback)
+
+
+class AsyncProxy(httpcore.AsyncConnectionPool):
+    def __init__(
+            self,
+            *,
+            proxy_type: ProxyType,
+            proxy_host: str,
+            proxy_port: int,
+            username=None,
+            password=None,
+            rdns=None,
+            loop=None,
+            **kwargs
+    ):
 
         self._loop = loop
         self._proxy_type = proxy_type
@@ -24,13 +122,7 @@ class AsyncProxyTransport(AsyncConnectionPool):
         self._password = password
         self._rdns = rdns
 
-        if ssl_context is None:
-            ssl_context = SSLConfig(
-                verify=verify, cert=cert,
-                trust_env=trust_env, http2=http2
-            ).ssl_context
-
-        super().__init__(http2=http2, ssl_context=ssl_context, **kwargs)
+        super().__init__(**kwargs)
 
     async def handle_async_request(
             self, method, url, headers=None,
@@ -50,8 +142,12 @@ class AsyncProxyTransport(AsyncConnectionPool):
             )
             connection = AsyncHTTPConnection(
                 origin=origin,
+                http1=self._http1,
                 http2=self._http2,
                 keepalive_expiry=self._keepalive_expiry,
+                uds=self._uds,
+                local_address=self._local_address,
+                retries=self._retries,
                 ssl_context=self._ssl_context,
                 socket=socket
             )
@@ -200,16 +296,4 @@ class AsyncProxyTransport(AsyncConnectionPool):
 
         return SocketStream(
             socket=sock
-        )
-
-    @classmethod
-    def from_url(cls, url, **kwargs):
-        proxy_type, host, port, username, password = parse_proxy_url(url)
-        return cls(
-            proxy_type=proxy_type,
-            proxy_host=host,
-            proxy_port=port,
-            username=username,
-            password=password,
-            **kwargs
         )
