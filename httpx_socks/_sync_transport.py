@@ -42,6 +42,7 @@ class SyncProxyTransport(BaseTransport):
             verify=verify,
             cert=cert,
             trust_env=trust_env,
+            http2=kwargs.get('http2', False)
         )
 
         self._pool = SyncProxy(
@@ -140,9 +141,6 @@ class SyncProxy(httpcore.SyncConnectionPool):
                 http1=self._http1,
                 http2=self._http2,
                 keepalive_expiry=self._keepalive_expiry,
-                uds=self._uds,
-                local_address=self._local_address,
-                retries=self._retries,
                 ssl_context=self._ssl_context,
                 socket=socket,
             )
