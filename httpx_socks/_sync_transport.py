@@ -3,8 +3,8 @@ from httpcore._backends.sync import SyncSocketStream  # noqa
 from httpcore._sync.connection import SyncHTTPConnection  # noqa
 from httpcore._utils import url_to_origin  # noqa
 
-from httpx import BaseTransport, Request, Response, SyncByteStream
-from httpx._config import SSLConfig, DEFAULT_LIMITS, create_ssl_context  # noqa
+from httpx import BaseTransport, Request, Response, SyncByteStream, Limits
+from httpx._config import DEFAULT_LIMITS, create_ssl_context  # noqa
 
 from python_socks import ProxyType, parse_proxy_url
 from python_socks.sync import Proxy
@@ -24,25 +24,25 @@ class ResponseStream(SyncByteStream):
 
 class SyncProxyTransport(BaseTransport):
     def __init__(
-            self,
-            *,
-            proxy_type: ProxyType,
-            proxy_host: str,
-            proxy_port: int,
-            username=None,
-            password=None,
-            rdns=None,
-
-            verify=True,
-            cert=None,
-            trust_env: bool = True,
-            **kwargs
+        self,
+        *,
+        proxy_type: ProxyType,
+        proxy_host: str,
+        proxy_port: int,
+        username=None,
+        password=None,
+        rdns=None,
+        verify=True,
+        cert=None,
+        trust_env: bool = True,
+        limits: Limits = DEFAULT_LIMITS,
+        **kwargs,
     ):
         ssl_context = create_ssl_context(
             verify=verify,
             cert=cert,
             trust_env=trust_env,
-            http2=kwargs.get('http2', False)
+            http2=kwargs.get('http2', False),
         )
 
         self._pool = SyncProxy(
@@ -53,16 +53,14 @@ class SyncProxyTransport(BaseTransport):
             password=password,
             rdns=rdns,
             ssl_context=ssl_context,
-            **kwargs
+            max_connections=limits.max_connections,
+            max_keepalive_connections=limits.max_keepalive_connections,
+            keepalive_expiry=limits.keepalive_expiry,
+            **kwargs,
         )
 
     def handle_request(self, request: Request) -> Response:
-        (
-            status_code,
-            headers,
-            byte_stream,
-            extensions
-        ) = self._pool.handle_request(
+        (status_code, headers, byte_stream, extensions,) = self._pool.handle_request(
             method=request.method.encode("ascii"),
             url=request.url.raw,
             headers=request.headers.raw,
@@ -74,7 +72,7 @@ class SyncProxyTransport(BaseTransport):
             status_code,
             headers=headers,
             stream=ResponseStream(byte_stream),
-            extensions=extensions
+            extensions=extensions,
         )
 
     @classmethod
@@ -86,7 +84,7 @@ class SyncProxyTransport(BaseTransport):
             proxy_port=port,
             username=username,
             password=password,
-            **kwargs
+            **kwargs,
         )
 
     def close(self) -> None:
@@ -102,15 +100,15 @@ class SyncProxyTransport(BaseTransport):
 
 class SyncProxy(httpcore.SyncConnectionPool):
     def __init__(
-            self,
-            *,
-            proxy_type: ProxyType,
-            proxy_host: str,
-            proxy_port: int,
-            username=None,
-            password=None,
-            rdns=None,
-            **kwargs
+        self,
+        *,
+        proxy_type: ProxyType,
+        proxy_host: str,
+        proxy_port: int,
+        username=None,
+        password=None,
+        rdns=None,
+        **kwargs,
     ):
 
         self._proxy_type = proxy_type
@@ -122,8 +120,17 @@ class SyncProxy(httpcore.SyncConnectionPool):
 
         super().__init__(**kwargs)
 
-    def handle_request(self, method, url, headers=None, stream=None,
-                       extensions=None):
+    def handle_request(
+        self,
+        method,
+        url,
+        headers=None,
+        stream=None,
+        extensions=None,
+    ):
+        if self._keepalive_expiry is not None:
+            self._keepalive_sweep()
+
         origin = url_to_origin(url)
         connection = self._get_connection_from_pool(origin)
 
@@ -133,8 +140,7 @@ class SyncProxy(httpcore.SyncConnectionPool):
 
         if connection is None:
             socket = self._connect_via_proxy(
-                origin=origin,
-                connect_timeout=connect_timeout
+                origin=origin, connect_timeout=connect_timeout
             )
             connection = SyncHTTPConnection(
                 origin=origin,
@@ -151,7 +157,7 @@ class SyncProxy(httpcore.SyncConnectionPool):
             url=url,
             headers=headers,
             stream=stream,
-            extensions=extensions
+            extensions=extensions,
         )
 
         return response
@@ -168,13 +174,11 @@ class SyncProxy(httpcore.SyncConnectionPool):
             port=self._proxy_port,
             username=self._username,
             password=self._password,
-            rdns=self._rdns
+            rdns=self._rdns,
         )
 
         sock = proxy.connect(host, port, timeout=connect_timeout)
 
         if ssl_context is not None:
-            sock = ssl_context.wrap_socket(
-                sock, server_hostname=host
-            )
+            sock = ssl_context.wrap_socket(sock, server_hostname=host)
         return SyncSocketStream(sock=sock)

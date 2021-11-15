@@ -4,8 +4,8 @@ import httpcore
 from httpcore._async.connection import AsyncHTTPConnection  # noqa
 from httpcore._utils import url_to_origin  # noqa
 
-from httpx import AsyncBaseTransport, Request, Response, AsyncByteStream
-from httpx._config import SSLConfig, DEFAULT_LIMITS, create_ssl_context  # noqa
+from httpx import AsyncBaseTransport, Request, Response, AsyncByteStream, Limits
+from httpx._config import DEFAULT_LIMITS, create_ssl_context  # noqa
 
 from python_socks import ProxyType, parse_proxy_url
 
@@ -24,25 +24,25 @@ class AsyncResponseStream(AsyncByteStream):
 
 class AsyncProxyTransport(AsyncBaseTransport):
     def __init__(
-            self,
-            *,
-            proxy_type: ProxyType,
-            proxy_host: str,
-            proxy_port: int,
-            username=None,
-            password=None,
-            rdns=None,
-
-            verify=True,
-            cert=None,
-            trust_env: bool = True,
-            **kwargs
+        self,
+        *,
+        proxy_type: ProxyType,
+        proxy_host: str,
+        proxy_port: int,
+        username=None,
+        password=None,
+        rdns=None,
+        verify=True,
+        cert=None,
+        trust_env: bool = True,
+        limits: Limits = DEFAULT_LIMITS,
+        **kwargs,
     ):
         ssl_context = create_ssl_context(
             verify=verify,
             cert=cert,
             trust_env=trust_env,
-            http2=kwargs.get('http2', False)
+            http2=kwargs.get('http2', False),
         )
 
         self._pool = AsyncProxy(
@@ -53,7 +53,10 @@ class AsyncProxyTransport(AsyncBaseTransport):
             password=password,
             rdns=rdns,
             ssl_context=ssl_context,
-            **kwargs
+            max_connections=limits.max_connections,
+            max_keepalive_connections=limits.max_keepalive_connections,
+            keepalive_expiry=limits.keepalive_expiry,
+            **kwargs,
         )
 
     async def handle_async_request(self, request: Request) -> Response:
@@ -61,13 +64,12 @@ class AsyncProxyTransport(AsyncBaseTransport):
             status_code,
             headers,
             byte_stream,
-            extensions
+            extensions,
         ) = await self._pool.handle_async_request(
-            method=request.method.encode("ascii"),
+            method=request.method.encode('ascii'),
             url=request.url.raw,
             headers=request.headers.raw,
-            stream=httpcore.AsyncIteratorByteStream(
-                request.stream.__aiter__()),
+            stream=httpcore.AsyncIteratorByteStream(request.stream.__aiter__()),
             extensions=request.extensions,
         )
 
@@ -75,7 +77,7 @@ class AsyncProxyTransport(AsyncBaseTransport):
             status_code,
             headers=headers,
             stream=AsyncResponseStream(byte_stream),
-            extensions=extensions
+            extensions=extensions,
         )
 
     @classmethod
@@ -87,7 +89,7 @@ class AsyncProxyTransport(AsyncBaseTransport):
             proxy_port=port,
             username=username,
             password=password,
-            **kwargs
+            **kwargs,
         )
 
     async def aclose(self) -> None:
@@ -103,16 +105,16 @@ class AsyncProxyTransport(AsyncBaseTransport):
 
 class AsyncProxy(httpcore.AsyncConnectionPool):
     def __init__(
-            self,
-            *,
-            proxy_type: ProxyType,
-            proxy_host: str,
-            proxy_port: int,
-            username=None,
-            password=None,
-            rdns=None,
-            loop=None,
-            **kwargs
+        self,
+        *,
+        proxy_type: ProxyType,
+        proxy_host: str,
+        proxy_port: int,
+        username=None,
+        password=None,
+        rdns=None,
+        loop=None,
+        **kwargs,
     ):
 
         self._loop = loop
@@ -126,8 +128,15 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
         super().__init__(**kwargs)
 
     async def handle_async_request(
-            self, method, url, headers=None,
-            stream=None, extensions=None):
+        self,
+        method,
+        url,
+        headers=None,
+        stream=None,
+        extensions=None,
+    ):
+        if self._keepalive_expiry is not None:
+            await self._keepalive_sweep()
 
         origin = url_to_origin(url)
         connection = await self._get_connection_from_pool(origin)
@@ -139,7 +148,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
         if connection is None:
             socket = await self._connect_via_proxy(
                 origin=origin,
-                connect_timeout=connect_timeout
+                connect_timeout=connect_timeout,
             )
             connection = AsyncHTTPConnection(
                 origin=origin,
@@ -147,7 +156,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
                 http2=self._http2,
                 keepalive_expiry=self._keepalive_expiry,
                 ssl_context=self._ssl_context,
-                socket=socket
+                socket=socket,
             )
             await self._add_to_pool(connection=connection, timeout=timeout)
 
@@ -156,7 +165,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             url=url,
             headers=headers,
             stream=stream,
-            extensions=extensions
+            extensions=extensions,
         )
         return response
 
@@ -170,41 +179,30 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             host=host,
             port=port,
             connect_timeout=connect_timeout,
-            ssl_context=ssl_context
+            ssl_context=ssl_context,
         )
 
     async def _open_stream(self, host, port, connect_timeout, ssl_context):
         backend = sniffio.current_async_library()
 
         if backend == 'asyncio':
-            return await self._open_aio_stream(
-                host,
-                port,
-                connect_timeout,
-                ssl_context
-            )
+            return await self._open_aio_stream(host, port, connect_timeout, ssl_context)
 
         if backend == 'trio':
             return await self._open_trio_stream(
-                host,
-                port,
-                connect_timeout,
-                ssl_context
+                host, port, connect_timeout, ssl_context
             )
 
         if backend == 'curio':
             return await self._open_curio_stream(
-                host,
-                port,
-                connect_timeout,
-                ssl_context
+                host, port, connect_timeout, ssl_context
             )
 
-        raise RuntimeError(f'Unsupported '  # pragma: no cover
-                           f'concurrency backend {backend!r}')
+        raise RuntimeError(
+            f'Unsupported concurrency backend {backend!r}'  # pragma: no cover
+        )
 
-    async def _open_aio_stream(self, host, port, connect_timeout,
-                               ssl_context):
+    async def _open_aio_stream(self, host, port, connect_timeout, ssl_context):
         import asyncio
         from httpcore._backends.asyncio import SocketStream  # noqa
         from python_socks.async_.asyncio import Proxy
@@ -219,7 +217,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             port=self._proxy_port,
             username=self._username,
             password=self._password,
-            rdns=self._rdns
+            rdns=self._rdns,
         )
 
         sock = await proxy.connect(host, port, timeout=connect_timeout)
@@ -231,12 +229,9 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             ssl=ssl_context,
             server_hostname=host if ssl_context else None,
         )
-        return SocketStream(
-            stream_reader=stream_reader, stream_writer=stream_writer
-        )
+        return SocketStream(stream_reader=stream_reader, stream_writer=stream_writer)
 
-    async def _open_trio_stream(self, host, port, connect_timeout,
-                                ssl_context):
+    async def _open_trio_stream(self, host, port, connect_timeout, ssl_context):
         import trio
         from httpcore._backends.trio import SocketStream  # noqa
         from python_socks.async_.trio import Proxy
@@ -247,7 +242,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             port=self._proxy_port,
             username=self._username,
             password=self._password,
-            rdns=self._rdns
+            rdns=self._rdns,
         )
 
         sock = await proxy.connect(host, port, timeout=connect_timeout)
@@ -255,18 +250,12 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
         stream = trio.SocketStream(sock)
 
         if ssl_context is not None:
-            stream = trio.SSLStream(
-                stream, ssl_context,
-                server_hostname=host
-            )
+            stream = trio.SSLStream(stream, ssl_context, server_hostname=host)
             await stream.do_handshake()
 
-        return SocketStream(
-            stream=stream
-        )
+        return SocketStream(stream=stream)
 
-    async def _open_curio_stream(self, host, port, connect_timeout,
-                                 ssl_context):
+    async def _open_curio_stream(self, host, port, connect_timeout, ssl_context):
         import curio.io
         from httpcore._backends.curio import SocketStream  # noqa
         from python_socks.async_.curio import Proxy
@@ -277,7 +266,7 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
             port=self._proxy_port,
             username=self._username,
             password=self._password,
-            rdns=self._rdns
+            rdns=self._rdns,
         )
 
         sock = await proxy.connect(host, port, timeout=connect_timeout)
@@ -287,11 +276,9 @@ class AsyncProxy(httpcore.AsyncConnectionPool):
                 ssl_context.wrap_socket(
                     sock._socket,  # noqa
                     do_handshake_on_connect=False,
-                    server_hostname=host
+                    server_hostname=host,
                 )
             )
             await sock.do_handshake()
 
-        return SocketStream(
-            socket=sock
-        )
+        return SocketStream(socket=sock)
