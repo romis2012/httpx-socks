@@ -34,10 +34,6 @@ to include optional trio support:
 pip install httpx-socks[trio]
 ```
 
-to include optional curio support:
-```
-pip install httpx-socks[curio]
-```
 
 ## Usage
 
