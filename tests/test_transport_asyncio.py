@@ -12,11 +12,12 @@ from httpx_socks import (
     ProxyConnectionError,
     ProxyTimeoutError,
 )
-
+# noinspection PyProtectedMember
+from httpx_socks._async_proxy import AsyncProxy
 from tests.config import (
     TEST_HOST_PEM_FILE, TEST_URL_IPV4, TEST_URL_IPV4_HTTPS, SOCKS5_IPV4_URL,
     LOGIN, PASSWORD, PROXY_HOST_IPV4, SOCKS5_PROXY_PORT, TEST_URL_IPV4_DELAY,
-    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL,
+    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL, SOCKS5_IPV4_HOSTNAME_URL,
 )
 
 
@@ -36,6 +37,18 @@ async def fetch(transport: AsyncProxyTransport,
     async with httpx.AsyncClient(transport=transport) as client:
         res = await client.get(url=url, timeout=timeout)
         return res
+
+
+@pytest.mark.parametrize('proxy_url', (SOCKS5_IPV4_URL, SOCKS5_IPV4_HOSTNAME_URL, HTTP_PROXY_URL))
+@pytest.mark.parametrize('target_url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
+@pytest.mark.asyncio
+async def test_proxy_direct(proxy_url, target_url):
+    ssl_context = create_ssl_context(target_url)
+    async with AsyncProxy.from_url(proxy_url, ssl_context=ssl_context) as proxy:
+        res = await proxy.request(method="GET", url=target_url)
+        assert res.status == 200
+        res = await proxy.request(method="GET", url=target_url)
+        assert res.status == 200
 
 
 @pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))

@@ -1,11 +1,10 @@
 from unittest import mock
 
-import pytest  # noqa
+# noinspection PyPackageRequirements
+import pytest
 
 # noinspection PyProtectedMember
 from python_socks._resolver_async_aio import Resolver as AsyncioResolver
-# noinspection PyProtectedMember
-from python_socks._resolver_async_curio import Resolver as CurioResolver
 # noinspection PyProtectedMember
 from python_socks._resolver_async_trio import Resolver as TrioResolver
 # noinspection PyProtectedMember
@@ -44,13 +43,7 @@ def patch_resolvers():
         new=async_resolve_factory(TrioResolver)
     )
 
-    p4 = mock.patch.object(
-        CurioResolver,
-        attribute='resolve',
-        new=async_resolve_factory(CurioResolver)
-    )
-
-    with p1, p2, p3, p4:
+    with p1, p2, p3:
         yield None
 
 

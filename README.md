@@ -11,11 +11,10 @@ It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy
 
 ## Requirements
 - Python >= 3.6
-- httpx >= 0.15.4
-- python-socks >= 1.1.0
+- httpx==0.21.*
+- python-socks>=1.2.4
 - async-timeout>=3.0.1 (optional)
 - trio>=0.16.0 (optional)
-- curio>=1.4 (optional)
 
 
 ## Installation
@@ -54,7 +53,7 @@ def fetch(url):
         return res.text
 ```
 
-#### async transport (asyncio, trio, curio)
+#### async transport (asyncio, trio)
 ```python
 import httpx
 from httpx_socks import AsyncProxyTransport
