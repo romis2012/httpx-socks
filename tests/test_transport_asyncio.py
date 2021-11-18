@@ -21,12 +21,14 @@ from tests.config import (
 )
 
 
-def create_ssl_context(url):
+def create_ssl_context(url, http2=False):
     parsed_url = URL(url)
     if parsed_url.scheme == 'https':
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
         ssl_context.verify_mode = ssl.CERT_REQUIRED
         ssl_context.load_verify_locations(TEST_HOST_PEM_FILE)
+        alpn_protocols = ['http/1.1', 'h2'] if http2 else ['http/1.1']
+        ssl_context.set_alpn_protocols(alpn_protocols)
         return ssl_context
     else:
         return None
@@ -156,3 +158,15 @@ async def test_http_proxy(url):
     )
     res = await fetch(transport=transport, url=url)
     assert res.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_proxy_http2():
+    url = TEST_URL_IPV4_HTTPS
+    proxy_url = HTTP_PROXY_URL
+    ssl_context = create_ssl_context(url, http2=True)
+
+    transport = AsyncProxyTransport.from_url(proxy_url, verify=ssl_context, http2=True)
+    res = await fetch(transport=transport, url=url)
+    assert res.status_code == 200
+    assert res.http_version == 'HTTP/2'

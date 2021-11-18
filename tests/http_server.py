@@ -3,7 +3,7 @@ import time
 from multiprocessing import Process
 
 from tests.utils import is_connectable
-from tests.http_app import run_app
+from tests.http_app2 import run_app
 
 
 class HttpServerConfig(typing.NamedTuple):

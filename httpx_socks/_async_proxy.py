@@ -126,7 +126,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
                 http2_negotiated = (
                     ssl_object is not None and ssl_object.selected_alpn_protocol() == "h2"
                 )
-                if http2_negotiated or (self._http2 and not self._http1):  # pragma: no cover
+                if http2_negotiated or (self._http2 and not self._http1):
                     from httpcore import AsyncHTTP2Connection
 
                     self._connection = AsyncHTTP2Connection(
@@ -253,28 +253,25 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:  # pragma: no cover
-            # If HTTP/2 support is enabled, and the resulting connection could
-            # end up as HTTP/2 then we should indicate the connection as being
-            # available to service multiple requests.
             return self._http2 and (self._remote_origin.scheme == b"https" or not self._http1)
         return self._connection.is_available()
 
     def has_expired(self) -> bool:
-        if self._connection is None:  # pragma: no cover
+        if self._connection is None:
             return False
         return self._connection.has_expired()
 
     def is_idle(self) -> bool:
-        if self._connection is None:  # pragma: no cover
+        if self._connection is None:
             return False
         return self._connection.is_idle()
 
     def is_closed(self) -> bool:
-        if self._connection is None:  # pragma: no cover
+        if self._connection is None:
             return False
         return self._connection.is_closed()
 
-    def info(self) -> str:
-        if self._connection is None:  # pragma: no cover
+    def info(self) -> str:  # pragma: no cover
+        if self._connection is None:
             return "CONNECTING"
         return self._connection.info()
