@@ -39,7 +39,7 @@ setup(
     install_requires=[
         'httpx>=0.21.0,<0.22.0',
         'httpcore>=0.14.0,<0.15.0',
-        'python-socks>=1.2.4',
+        'python-socks>=2.0.0',
     ],
     extras_require={
         'asyncio': ['async-timeout>=3.0.1'],

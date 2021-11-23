@@ -1,10 +1,11 @@
 import ssl
 
+import pytest
+from unittest.mock import patch
+
 import httpcore
 import httpx
-# noinspection PyPackageRequirements
-import pytest
-# noinspection PyPackageRequirements
+
 from yarl import URL
 
 from httpx_socks import (
@@ -19,8 +20,10 @@ from httpx_socks._sync_proxy import SyncProxy
 from tests.config import (
     TEST_HOST_PEM_FILE, TEST_URL_IPV4, TEST_URL_IPV4_HTTPS, SOCKS5_IPV4_URL,
     LOGIN, PASSWORD, PROXY_HOST_IPV4, SOCKS5_PROXY_PORT, TEST_URL_IPV4_DELAY,
-    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL, SOCKS5_IPV4_HOSTNAME_URL
+    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL, SOCKS5_IPV4_HOSTNAME_URL,
 )
+
+from tests.mocks import getaddrinfo_sync_mock
 
 
 def create_ssl_context(url, http2=False):
@@ -45,11 +48,12 @@ def fetch(transport: SyncProxyTransport, url: str, timeout: httpx.Timeout = None
 @pytest.mark.parametrize('proxy_url', (SOCKS5_IPV4_URL, SOCKS5_IPV4_HOSTNAME_URL, HTTP_PROXY_URL))
 @pytest.mark.parametrize('target_url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
 def test_proxy_direct(proxy_url, target_url):
-    with SyncProxy.from_url(proxy_url, ssl_context=create_ssl_context(target_url)) as proxy:
-        res = proxy.request(method="GET", url=target_url)
-        assert res.status == 200
-        res = proxy.request(method="GET", url=target_url)
-        assert res.status == 200
+    with patch('socket.getaddrinfo', new=getaddrinfo_sync_mock()):
+        with SyncProxy.from_url(proxy_url, ssl_context=create_ssl_context(target_url)) as proxy:
+            res = proxy.request(method="GET", url=target_url)
+            assert res.status == 200
+            res = proxy.request(method="GET", url=target_url)
+            assert res.status == 200
 
 
 @pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
