@@ -4,7 +4,7 @@ from tests.config import (
     TEST_HOST_NAME_IPV4,
     PROXY_HOST_NAME_IPV4,
     TEST_HOST_NAME_IPV6,
-    PROXY_HOST_NAME_IPV6
+    PROXY_HOST_NAME_IPV6,
 )
 
 
@@ -21,6 +21,7 @@ def getaddrinfo_sync_mock():
         return _orig_getaddrinfo(host, port, family, type, proto, flags)
 
     return getaddrinfo
+
 
 def _resolve_local(host):
     if host in (TEST_HOST_NAME_IPV4, PROXY_HOST_NAME_IPV4):
@@ -41,9 +42,7 @@ def sync_resolve_factory(cls):
         if res is not None:
             return res
 
-        return original_resolver(
-            self, host=host, port=port,
-            family=family)
+        return original_resolver(self, host=host, port=port, family=family)
 
     return new_resolver
 
@@ -57,7 +56,6 @@ def async_resolve_factory(cls):
         if res is not None:
             return res
 
-        return await original_resolver(self, host=host, port=port,
-                                       family=family)
+        return await original_resolver(self, host=host, port=port, family=family)
 
     return new_resolver
