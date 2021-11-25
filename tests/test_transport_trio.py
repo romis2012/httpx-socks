@@ -16,7 +16,8 @@ from httpx_socks import (
 from tests.config import (
     TEST_HOST_PEM_FILE, TEST_URL_IPV4, TEST_URL_IPV4_HTTPS, SOCKS5_IPV4_URL,
     LOGIN, PASSWORD, PROXY_HOST_IPV4, SOCKS5_PROXY_PORT, TEST_URL_IPV4_DELAY,
-    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL,
+    SKIP_IPV6_TESTS, SOCKS5_IPV6_URL, SOCKS4_URL, HTTP_PROXY_URL, PROXY_HOST_PEM_FILE,
+    HTTPS_PROXY_URL,
 )
 
 
@@ -145,6 +146,24 @@ async def test_http_proxy(url):
     transport = AsyncProxyTransport.from_url(
         HTTP_PROXY_URL,
         verify=create_ssl_context(url)
+    )
+    res = await fetch(transport=transport, url=url)
+    assert res.status_code == 200
+
+
+@pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
+@pytest.mark.parametrize('http2', (False, True))
+@pytest.mark.trio
+async def test_secure_proxy(url, http2):
+    proxy_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    proxy_ssl.verify_mode = ssl.CERT_REQUIRED
+    proxy_ssl.load_verify_locations(PROXY_HOST_PEM_FILE)
+
+    transport = AsyncProxyTransport.from_url(
+        HTTPS_PROXY_URL,
+        proxy_ssl=proxy_ssl,
+        http2=http2,
+        verify=create_ssl_context(url, http2=http2),
     )
     res = await fetch(transport=transport, url=url)
     assert res.status_code == 200

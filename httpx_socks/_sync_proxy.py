@@ -10,7 +10,8 @@ from httpcore import (
     HTTP11Connection,
     ConnectionNotAvailable,
 )
-from httpcore.backends.sync import SyncStream
+# from httpcore.backends.sync import SyncStream
+from ._sync_stream import SyncStream
 from httpcore._synchronization import Lock
 
 from python_socks import ProxyType, parse_proxy_url
@@ -27,6 +28,7 @@ class SyncProxy(ConnectionPool):
         username=None,
         password=None,
         rdns=None,
+        proxy_ssl: ssl.SSLContext = None,
         **kwargs,
     ):
         self._proxy_type = proxy_type
@@ -35,6 +37,7 @@ class SyncProxy(ConnectionPool):
         self._username = username
         self._password = password
         self._rdns = rdns
+        self._proxy_ssl = proxy_ssl
 
         super().__init__(**kwargs)
 
@@ -46,6 +49,7 @@ class SyncProxy(ConnectionPool):
             username=self._username,
             password=self._password,
             rdns=self._rdns,
+            proxy_ssl=self._proxy_ssl,
             remote_origin=origin,
             ssl_context=self._ssl_context,
             keepalive_expiry=self._keepalive_expiry,
@@ -76,6 +80,7 @@ class SyncProxyConnection(ConnectionInterface):
         username=None,
         password=None,
         rdns=None,
+        proxy_ssl: ssl.SSLContext = None,
         remote_origin: Origin,
         ssl_context: ssl.SSLContext,
         keepalive_expiry: float = None,
@@ -92,6 +97,7 @@ class SyncProxyConnection(ConnectionInterface):
         self._username = username
         self._password = password
         self._rdns = rdns
+        self._proxy_ssl = proxy_ssl
 
         self._remote_origin = remote_origin
         self._ssl_context = ssl_context
@@ -149,6 +155,7 @@ class SyncProxyConnection(ConnectionInterface):
             username=self._username,
             password=self._password,
             rdns=self._rdns,
+            proxy_ssl=self._proxy_ssl,
         )
 
         proxy_stream = proxy.connect(

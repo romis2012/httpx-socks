@@ -25,6 +25,9 @@ from tests.config import (
     TEST_PORT_IPV4_HTTPS,
     TEST_HOST_CERT_FILE,
     TEST_HOST_KEY_FILE,
+    HTTPS_PROXY_PORT,
+    PROXY_HOST_CERT_FILE,
+    PROXY_HOST_KEY_FILE,
 )
 from tests.http_server import HttpServer, HttpServerConfig
 from tests.mocks import (
@@ -112,6 +115,15 @@ def proxy_server():
             port=SOCKS5_PROXY_PORT_NO_AUTH,
             username=None,
             password=None,
+        ),
+        ProxyConfig(
+            proxy_type='http',
+            host=PROXY_HOST_IPV4,
+            port=HTTPS_PROXY_PORT,
+            username=LOGIN,
+            password=PASSWORD,
+            certfile=PROXY_HOST_CERT_FILE,
+            keyfile=PROXY_HOST_KEY_FILE,
         ),
     ]
 

@@ -26,6 +26,7 @@ class AsyncProxy(AsyncConnectionPool):
         username=None,
         password=None,
         rdns=None,
+        proxy_ssl: ssl.SSLContext = None,
         loop=None,
         **kwargs,
     ):
@@ -35,6 +36,7 @@ class AsyncProxy(AsyncConnectionPool):
         self._username = username
         self._password = password
         self._rdns = rdns
+        self._proxy_ssl = proxy_ssl
         self._loop = loop
 
         super().__init__(**kwargs)
@@ -47,6 +49,7 @@ class AsyncProxy(AsyncConnectionPool):
             username=self._username,
             password=self._password,
             rdns=self._rdns,
+            proxy_ssl=self._proxy_ssl,
             loop=self._loop,
             remote_origin=origin,
             ssl_context=self._ssl_context,
@@ -78,6 +81,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         username=None,
         password=None,
         rdns=None,
+        proxy_ssl: ssl.SSLContext = None,
         loop=None,
         remote_origin: Origin,
         ssl_context: ssl.SSLContext,
@@ -95,6 +99,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         self._username = username
         self._password = password
         self._rdns = rdns
+        self._proxy_ssl = proxy_ssl
         self._loop = loop
 
         self._remote_origin = remote_origin
@@ -179,6 +184,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
             username=self._username,
             password=self._password,
             rdns=self._rdns,
+            proxy_ssl=self._proxy_ssl,
         )
 
         proxy_stream = await proxy.connect(
@@ -201,6 +207,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
             username=self._username,
             password=self._password,
             rdns=self._rdns,
+            proxy_ssl=self._proxy_ssl,
         )
 
         proxy_stream = await proxy.connect(

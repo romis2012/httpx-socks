@@ -1,3 +1,4 @@
+import ssl
 import typing
 
 import httpcore
@@ -33,6 +34,7 @@ class AsyncProxyTransport(AsyncBaseTransport):
         username=None,
         password=None,
         rdns=None,
+        proxy_ssl: ssl.SSLContext = None,
         verify=True,
         cert=None,
         trust_env: bool = True,
@@ -53,6 +55,7 @@ class AsyncProxyTransport(AsyncBaseTransport):
             username=username,
             password=password,
             rdns=rdns,
+            proxy_ssl=proxy_ssl,
             ssl_context=ssl_context,
             max_connections=limits.max_connections,
             max_keepalive_connections=limits.max_keepalive_connections,
