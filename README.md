@@ -61,3 +61,20 @@ async def fetch(url):
         res = await client.get(url)
         return res.text
 ```
+
+#### secure proxy connections (aka "HTTPS proxies", experimental feature)
+```python
+import ssl
+import httpx
+from httpx_socks import AsyncProxyTransport
+
+async def fetch(url):
+    proxy_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    proxy_ssl.verify_mode = ssl.CERT_REQUIRED
+    proxy_ssl.load_verify_locations(...)
+    
+    transport = AsyncProxyTransport.from_url('http://user:password@127.0.0.1:8080', proxy_ssl=proxy_ssl)
+    async with httpx.AsyncClient(transport=transport) as client:
+        res = await client.get(url)
+        return res.text
+```
