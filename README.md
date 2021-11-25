@@ -62,7 +62,7 @@ async def fetch(url):
         return res.text
 ```
 
-#### secure proxy connections (aka "HTTPS proxies", experimental feature)
+#### secure proxy connections (aka "HTTPS proxies", experimental feature, both sync and async support)
 ```python
 import ssl
 import httpx
