@@ -11,12 +11,10 @@ from httpcore import (
     ConnectionNotAvailable,
 )
 from httpcore.backends.sync import SyncStream
-
-# noinspection PyProtectedMember
 from httpcore._synchronization import Lock
 
 from python_socks import ProxyType, parse_proxy_url
-from python_socks.sync import Proxy
+from python_socks.sync.v2 import Proxy
 
 
 class SyncProxy(ConnectionPool):
@@ -78,7 +76,6 @@ class SyncProxyConnection(ConnectionInterface):
         username=None,
         password=None,
         rdns=None,
-        # proxy_origin: Origin,
         remote_origin: Origin,
         ssl_context: ssl.SSLContext,
         keepalive_expiry: float = None,
@@ -143,7 +140,7 @@ class SyncProxyConnection(ConnectionInterface):
         scheme, hostname, port = origin.scheme, origin.host, origin.port
 
         ssl_context = self._ssl_context if scheme == b'https' else None
-        host = hostname.decode('ascii')  # ?
+        host = hostname.decode('ascii')
 
         proxy = Proxy.create(
             proxy_type=self._proxy_type,
@@ -154,12 +151,14 @@ class SyncProxyConnection(ConnectionInterface):
             rdns=self._rdns,
         )
 
-        sock = proxy.connect(host, port, timeout=connect_timeout)
+        proxy_stream = proxy.connect(
+            host,
+            port,
+            dest_ssl=ssl_context,
+            timeout=connect_timeout,
+        )
 
-        if ssl_context is not None:
-            sock = ssl_context.wrap_socket(sock, server_hostname=host)
-
-        return SyncStream(sock=sock)
+        return SyncStream(sock=proxy_stream.socket)
 
     def close(self) -> None:
         if self._connection is not None:
@@ -170,7 +169,8 @@ class SyncProxyConnection(ConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:  # pragma: no cover
-            return self._http2 and (self._remote_origin.scheme == b"https" or not self._http1)
+            # return self._http2 and (self._remote_origin.scheme == b"https" or not self._http1)
+            return False
         return self._connection.is_available()
 
     def has_expired(self) -> bool:
