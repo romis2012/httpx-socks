@@ -15,7 +15,7 @@ It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy
 ## Requirements
 - Python >= 3.6
 - httpx==0.21.*
-- python-socks>=1.2.4
+- python-socks>=2.0.0
 - async-timeout>=3.0.1 (optional)
 - trio>=0.16.0 (optional)
 
