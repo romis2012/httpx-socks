@@ -8,7 +8,7 @@
 -->
 
 The `httpx-socks` package provides proxy transports for [httpx](https://github.com/encode/httpx) client. 
-SOCKS4(a), SOCKS5, HTTP (tunneling) proxy supported.
+SOCKS4(a), SOCKS5(h), HTTP (tunneling) proxy supported.
 It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy functionality.
 
 
