@@ -168,7 +168,7 @@ async def test_http_proxy(url):
 
 @pytest.mark.parametrize('url', (TEST_URL_IPV4, TEST_URL_IPV4_HTTPS))
 @pytest.mark.parametrize('http2', (False, True))
-@pytest.mark.trio
+@pytest.mark.asyncio
 async def test_secure_proxy(url, http2):
     proxy_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS)
     proxy_ssl.verify_mode = ssl.CERT_REQUIRED
