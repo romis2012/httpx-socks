@@ -1,4 +1,4 @@
-dist: xenial
+dist: focal
 sudo: false
 language: python
 
@@ -6,6 +6,7 @@ python:
   - "3.7"
   - "3.8"
   - "3.9"
+  - "3.10"
 
 env:
   - SKIP_IPV6_TESTS=true
