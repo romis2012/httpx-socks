@@ -1,12 +1,13 @@
+import ssl
 from unittest import mock
 
 import pytest
-
+import trustme
+from python_socks.async_.anyio._resolver import Resolver as AnyioResolver
 from python_socks.async_.asyncio._resolver import Resolver as AsyncioResolver
 from python_socks.async_.trio._resolver import Resolver as TrioResolver
-from python_socks.async_.anyio._resolver import Resolver as AnyioResolver
-
 from python_socks.sync._resolver import SyncResolver
+
 from tests.config import (
     PROXY_HOST_IPV4,
     PROXY_HOST_IPV6,
@@ -23,11 +24,11 @@ from tests.config import (
     TEST_HOST_IPV4,
     TEST_HOST_IPV6,
     TEST_PORT_IPV4_HTTPS,
-    TEST_HOST_CERT_FILE,
-    TEST_HOST_KEY_FILE,
     HTTPS_PROXY_PORT,
-    PROXY_HOST_CERT_FILE,
-    PROXY_HOST_KEY_FILE,
+    TEST_HOST_NAME_IPV4,
+    TEST_HOST_NAME_IPV6,
+    PROXY_HOST_NAME_IPV4,
+    PROXY_HOST_NAME_IPV6,
 )
 from tests.http_server import HttpServer, HttpServerConfig
 from tests.mocks import (
@@ -37,6 +38,80 @@ from tests.mocks import (
     getaddrinfo_async_mock,
 )
 from tests.proxy_server import ProxyConfig, ProxyServer
+
+
+@pytest.fixture(scope='session')
+def target_ssl_ca() -> trustme.CA:
+    return trustme.CA()
+
+
+@pytest.fixture(scope='session')
+def target_ssl_cert(target_ssl_ca) -> trustme.LeafCert:
+    return target_ssl_ca.issue_cert(
+        'localhost',
+        TEST_HOST_IPV4,
+        TEST_HOST_IPV6,
+        TEST_HOST_NAME_IPV4,
+        TEST_HOST_NAME_IPV6,
+    )
+
+
+@pytest.fixture(scope='session')
+def target_ssl_certfile(target_ssl_cert):
+    with target_ssl_cert.cert_chain_pems[0].tempfile() as cert_path:
+        yield cert_path
+
+
+@pytest.fixture(scope='session')
+def target_ssl_keyfile(target_ssl_cert):
+    with target_ssl_cert.private_key_pem.tempfile() as private_key_path:
+        yield private_key_path
+
+
+@pytest.fixture(scope='session')
+def target_ssl_context(target_ssl_ca) -> ssl.SSLContext:
+    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+    ssl_ctx.check_hostname = True
+    target_ssl_ca.configure_trust(ssl_ctx)
+    return ssl_ctx
+
+
+@pytest.fixture(scope='session')
+def proxy_ssl_ca() -> trustme.CA:
+    return trustme.CA()
+
+
+@pytest.fixture(scope='session')
+def proxy_ssl_cert(proxy_ssl_ca) -> trustme.LeafCert:
+    return proxy_ssl_ca.issue_cert(
+        'localhost',
+        PROXY_HOST_IPV4,
+        PROXY_HOST_IPV6,
+        PROXY_HOST_NAME_IPV4,
+        PROXY_HOST_NAME_IPV6,
+    )
+
+
+@pytest.fixture(scope='session')
+def proxy_ssl_context(proxy_ssl_ca) -> ssl.SSLContext:
+    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+    ssl_ctx.check_hostname = True
+    proxy_ssl_ca.configure_trust(ssl_ctx)
+    return ssl_ctx
+
+
+@pytest.fixture(scope='session')
+def proxy_ssl_certfile(proxy_ssl_cert):
+    with proxy_ssl_cert.cert_chain_pems[0].tempfile() as cert_path:
+        yield cert_path
+
+
+@pytest.fixture(scope='session')
+def proxy_ssl_keyfile(proxy_ssl_cert):
+    with proxy_ssl_cert.private_key_pem.tempfile() as private_key_path:
+        yield private_key_path
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -79,7 +154,7 @@ def patch_resolvers():
 
 
 @pytest.fixture(scope='session', autouse=True)
-def proxy_server():
+def proxy_server(proxy_ssl_certfile, proxy_ssl_keyfile):
     config = [
         ProxyConfig(
             proxy_type='http',
@@ -122,8 +197,8 @@ def proxy_server():
             port=HTTPS_PROXY_PORT,
             username=LOGIN,
             password=PASSWORD,
-            certfile=PROXY_HOST_CERT_FILE,
-            keyfile=PROXY_HOST_KEY_FILE,
+            certfile=proxy_ssl_certfile,
+            keyfile=proxy_ssl_keyfile,
         ),
     ]
 
@@ -149,7 +224,7 @@ def proxy_server():
 
 
 @pytest.fixture(scope='session', autouse=True)
-def web_server():
+def web_server(target_ssl_certfile, target_ssl_keyfile):
     config = [
         HttpServerConfig(
             host=TEST_HOST_IPV4,
@@ -158,8 +233,8 @@ def web_server():
         HttpServerConfig(
             host=TEST_HOST_IPV4,
             port=TEST_PORT_IPV4_HTTPS,
-            certfile=TEST_HOST_CERT_FILE,
-            keyfile=TEST_HOST_KEY_FILE,
+            certfile=target_ssl_certfile,
+            keyfile=target_ssl_keyfile,
         ),
     ]
 

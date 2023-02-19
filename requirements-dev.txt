@@ -9,3 +9,4 @@ yarl==1.6.3
 async-timeout==4.0.0
 hypercorn==0.12.0
 starlette==0.19.1
+trustme==0.9.0

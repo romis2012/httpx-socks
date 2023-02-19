@@ -92,12 +92,3 @@ TEST_URL_IPV4_HTTPS = 'https://{host}:{port}/ip'.format(
 
 def resolve_path(path):
     return os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), path))
-
-
-TEST_HOST_CERT_FILE = resolve_path('./cert/test_host.crt')
-TEST_HOST_KEY_FILE = resolve_path('./cert/test_host.key')
-TEST_HOST_PEM_FILE = resolve_path('./cert/test_host.pem')
-
-PROXY_HOST_CERT_FILE = resolve_path('./cert/proxy_host.crt')
-PROXY_HOST_KEY_FILE = resolve_path('./cert/proxy_host.key')
-PROXY_HOST_PEM_FILE = resolve_path('./cert/proxy_host.pem')
