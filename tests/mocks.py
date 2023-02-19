@@ -9,7 +9,7 @@ from tests.config import (
 
 
 def getaddrinfo_sync_mock():
-    orig_getaddrinfo = socket.getaddrinfo
+    _orig_getaddrinfo = socket.getaddrinfo
 
     def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
         if host in (TEST_HOST_NAME_IPV4, PROXY_HOST_NAME_IPV4):
@@ -18,7 +18,7 @@ def getaddrinfo_sync_mock():
         if host in (TEST_HOST_NAME_IPV6, PROXY_HOST_NAME_IPV6):
             return [(socket.AF_INET6, socket.SOCK_STREAM, 6, '', ('::1', port, 0, 0))]
 
-        return orig_getaddrinfo(host, port, family, type, proto, flags)
+        return _orig_getaddrinfo(host, port, family, type, proto, flags)
 
     return getaddrinfo
 
@@ -31,7 +31,14 @@ def getaddrinfo_async_mock(origin_getaddrinfo):
         if host in (TEST_HOST_NAME_IPV6, PROXY_HOST_NAME_IPV6):
             return [(socket.AF_INET6, socket.SOCK_STREAM, 6, '', ('::1', port, 0, 0))]
 
-        return await origin_getaddrinfo(host, port, family, type, proto, flags)
+        return await origin_getaddrinfo(
+            host,
+            port,
+            family=family,
+            type=type,
+            proto=proto,
+            flags=flags,
+        )
 
     return getaddrinfo
 
@@ -47,28 +54,28 @@ def _resolve_local(host):
 
 
 def sync_resolve_factory(cls):
-    original_resolver = cls.resolve
+    original_resolve = cls.resolve
 
-    def new_resolver(self, host, port=0, family=socket.AF_UNSPEC):
+    def new_resolve(self, host, port=0, family=socket.AF_UNSPEC):
         res = _resolve_local(host)
 
         if res is not None:
             return res
 
-        return original_resolver(self, host=host, port=port, family=family)
+        return original_resolve(self, host=host, port=port, family=family)
 
-    return new_resolver
+    return new_resolve
 
 
 def async_resolve_factory(cls):
-    original_resolver = cls.resolve
+    original_resolve = cls.resolve
 
-    async def new_resolver(self, host, port=0, family=socket.AF_UNSPEC):
+    async def new_resolve(self, host, port=0, family=socket.AF_UNSPEC):
         res = _resolve_local(host)
 
         if res is not None:
             return res
 
-        return await original_resolver(self, host=host, port=port, family=family)
+        return await original_resolve(self, host=host, port=port, family=family)
 
-    return new_resolver
+    return new_resolve

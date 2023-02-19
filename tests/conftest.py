@@ -38,6 +38,7 @@ from tests.mocks import (
     getaddrinfo_async_mock,
 )
 from tests.proxy_server import ProxyConfig, ProxyServer
+from tests.utils import wait_until_connectable
 
 
 @pytest.fixture(scope='session')
@@ -197,8 +198,8 @@ def proxy_server(proxy_ssl_certfile, proxy_ssl_keyfile):
             port=HTTPS_PROXY_PORT,
             username=LOGIN,
             password=PASSWORD,
-            certfile=proxy_ssl_certfile,
-            keyfile=proxy_ssl_keyfile,
+            ssl_certfile=proxy_ssl_certfile,
+            ssl_keyfile=proxy_ssl_keyfile,
         ),
     ]
 
@@ -216,7 +217,7 @@ def proxy_server(proxy_ssl_certfile, proxy_ssl_keyfile):
     server = ProxyServer(config=config)
     server.start()
     for cfg in config:
-        server.wait_until_connectable(host=cfg.host, port=cfg.port)
+        wait_until_connectable(host=cfg.host, port=cfg.port, timeout=10)
 
     yield None
 
