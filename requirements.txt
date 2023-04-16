@@ -1,5 +1,5 @@
-httpx>=0.21.0,<0.24.0
-httpcore>=0.14.0,<0.17.0
+httpx>=0.21.0,<0.25.0
+httpcore>=0.14.0,<0.18.0
 anyio==3.*
 python-socks>=2.0.0
 async-timeout>=3.0.1
