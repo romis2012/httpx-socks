@@ -11,8 +11,8 @@ from httpcore import (
     AsyncHTTP11Connection,
     ConnectionNotAvailable,
 )
+from httpcore import AsyncNetworkStream
 from httpcore._synchronization import AsyncLock
-from httpcore.backends.base import AsyncNetworkStream
 from python_socks import ProxyType, parse_proxy_url
 
 
@@ -174,7 +174,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         raise RuntimeError(f'Unsupported concurrency backend {backend!r}')  # pragma: no cover
 
     async def _open_aio_stream(self, host, port, connect_timeout, ssl_context):
-        from httpcore.backends.asyncio import AsyncIOStream
+        from httpcore._backends.anyio import AnyIOStream
         from python_socks.async_.anyio import Proxy
 
         proxy = Proxy.create(
@@ -194,10 +194,10 @@ class AsyncProxyConnection(AsyncConnectionInterface):
             timeout=connect_timeout,
         )
 
-        return AsyncIOStream(proxy_stream.anyio_stream)
+        return AnyIOStream(proxy_stream.anyio_stream)
 
     async def _open_trio_stream(self, host, port, connect_timeout, ssl_context):
-        from httpcore.backends.trio import TrioStream
+        from httpcore._backends.trio import TrioStream
         from python_socks.async_.trio.v2 import Proxy
 
         proxy = Proxy.create(

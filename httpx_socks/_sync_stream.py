@@ -1,7 +1,7 @@
 import ssl
 import typing
 
-from httpcore.backends.sync import SyncStream as CoreSyncStream
+from httpcore._backends.sync import SyncStream as CoreSyncStream
 from httpcore._utils import is_socket_readable
 from python_socks.sync.v2._ssl_transport import SSLTransport
 
