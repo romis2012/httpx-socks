@@ -1,8 +1,8 @@
 # httpx-socks
 
-[![Build Status](https://api.travis-ci.com/romis2012/httpx-socks.svg?branch=master)](https://travis-ci.com/github/romis2012/httpx-socks)
-[![Coverage Status](https://coveralls.io/repos/github/romis2012/httpx-socks/badge.svg?branch=master&_=q)](https://coveralls.io/github/romis2012/httpx-socks?branch=master)
-[![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://badge.fury.io/py/httpx-socks)
+[![CI](https://github.com/romis2012/httpx-socks/actions/workflows/ci.yml/badge.svg)](https://github.com/romis2012/httpx-socks/actions/workflows/ci.yml)
+[![Coverage Status](https://codecov.io/gh/romis2012/httpx-socks/branch/master/graph/badge.svg)](https://codecov.io/gh/romis2012/httpx-socks)
+[![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://pypi.python.org/pypi/httpx-socks)
 <!--
 [![Downloads](https://pepy.tech/badge/httpx-socks/month)](https://pepy.tech/project/httpx-socks)
 -->
