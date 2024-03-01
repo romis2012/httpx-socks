@@ -7,22 +7,11 @@ from httpx import BaseTransport, Request, Response, SyncByteStream, Limits
 
 # noinspection PyProtectedMember
 from httpx._config import DEFAULT_LIMITS, create_ssl_context
+# noinspection PyProtectedMember
+from httpx._transports.default import ResponseStream, map_httpcore_exceptions
 
 from ._sync_proxy import SyncProxy
 from python_socks import ProxyType, parse_proxy_url
-
-
-class ResponseStream(SyncByteStream):
-    def __init__(self, httpcore_stream: typing.Iterable[bytes]):
-        self._httpcore_stream = httpcore_stream
-
-    def __iter__(self) -> typing.Iterator[bytes]:
-        for part in self._httpcore_stream:
-            yield part
-
-    def close(self) -> None:
-        if hasattr(self._httpcore_stream, "close"):
-            self._httpcore_stream.close()  # type: ignore
 
 
 class SyncProxyTransport(BaseTransport):
@@ -80,7 +69,8 @@ class SyncProxyTransport(BaseTransport):
             extensions=request.extensions,
         )
 
-        resp = self._pool.handle_request(req)
+        with map_httpcore_exceptions():
+            resp = self._pool.handle_request(req)
 
         assert isinstance(resp.stream, typing.Iterable)
 
@@ -111,4 +101,5 @@ class SyncProxyTransport(BaseTransport):
         return self
 
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
-        self._pool.__exit__(exc_type, exc_value, traceback)
+        with map_httpcore_exceptions():
+            self._pool.__exit__(exc_type, exc_value, traceback)

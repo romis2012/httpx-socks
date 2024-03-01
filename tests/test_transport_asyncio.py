@@ -1,6 +1,5 @@
 import ssl
 
-import httpcore
 import httpx
 import pytest
 from yarl import URL
@@ -103,7 +102,8 @@ async def test_socks5_proxy_with_read_timeout(target_ssl_ca, url=TEST_URL_IPV4_D
         verify=create_ssl_context(url, ca=target_ssl_ca),
     )
     timeout = httpx.Timeout(2, connect=32)
-    with pytest.raises(httpcore.ReadTimeout):
+    # with pytest.raises(httpcore.ReadTimeout):
+    with pytest.raises(httpx.ReadTimeout):
         await fetch(transport=transport, url=url, timeout=timeout)
 
 

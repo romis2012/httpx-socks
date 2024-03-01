@@ -6,22 +6,11 @@ from httpx import AsyncBaseTransport, Request, Response, AsyncByteStream, Limits
 
 # noinspection PyProtectedMember
 from httpx._config import DEFAULT_LIMITS, create_ssl_context
+# noinspection PyProtectedMember
+from httpx._transports.default import AsyncResponseStream, map_httpcore_exceptions
 from python_socks import ProxyType, parse_proxy_url
 
 from ._async_proxy import AsyncProxy
-
-
-class AsyncResponseStream(AsyncByteStream):
-    def __init__(self, httpcore_stream: typing.AsyncIterable[bytes]):
-        self._httpcore_stream = httpcore_stream
-
-    async def __aiter__(self) -> typing.AsyncIterator[bytes]:
-        async for part in self._httpcore_stream:
-            yield part
-
-    async def aclose(self) -> None:
-        if hasattr(self._httpcore_stream, "aclose"):
-            await self._httpcore_stream.aclose()  # type: ignore
 
 
 class AsyncProxyTransport(AsyncBaseTransport):
@@ -79,7 +68,8 @@ class AsyncProxyTransport(AsyncBaseTransport):
             extensions=request.extensions,
         )
 
-        resp = await self._pool.handle_async_request(req)
+        with map_httpcore_exceptions():
+            resp = await self._pool.handle_async_request(req)
 
         assert isinstance(resp.stream, typing.AsyncIterable)
 
@@ -110,4 +100,5 @@ class AsyncProxyTransport(AsyncBaseTransport):
         return self
 
     async def __aexit__(self, exc_type=None, exc_value=None, traceback=None):
-        await self._pool.__aexit__(exc_type, exc_value, traceback)
+        with map_httpcore_exceptions():
+            await self._pool.__aexit__(exc_type, exc_value, traceback)
