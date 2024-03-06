@@ -1,9 +1,9 @@
-flake8==3.9.1
-pytest==7.0.1
-pytest-cov==3.0.0
-pytest-asyncio==0.18.3
-trio==0.22.0
-pytest-trio==0.7.0
+flake8>=3.9.1
+pytest==8.0.2
+pytest-cov==4.1.0
+pytest-asyncio==0.23.5
+trio==0.24.0
+pytest-trio==0.8.0
 yarl>=1.6.3
 async-timeout==4.0.0
 hypercorn==0.14.3
