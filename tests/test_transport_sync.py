@@ -1,4 +1,5 @@
 import ssl
+from unittest import mock
 
 import httpx
 import pytest
@@ -176,3 +177,19 @@ def test_proxy_http2(target_ssl_ca):
     res = fetch(transport=transport, url=url)
     assert res.status_code == 200
     assert res.http_version == 'HTTP/2'
+
+
+def test_failed_proxy_connection():
+    url = TEST_URL_IPV4_HTTPS
+    proxy_url = HTTP_PROXY_URL
+
+    transport = SyncProxyTransport.from_url(proxy_url)
+    with httpx.Client(transport=transport) as client:
+        with mock.patch(
+            'httpx_socks._sync_proxy.SyncProxyConnection._connect_via_proxy',
+            side_effect=Exception,
+        ):
+            with pytest.raises(Exception):
+                client.get(url=url)
+
+        assert len(client._transport._pool._connections) == 0
