@@ -110,40 +110,45 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
         self._connect_lock = AsyncLock()
         self._connection = None
+        self._connect_failed: bool = False
 
     async def handle_async_request(self, request: Request) -> Response:
         timeouts = request.extensions.get('timeout', {})
         timeout = timeouts.get('connect', None)
 
-        async with self._connect_lock:
-            if self._connection is None:
-                stream = await self._connect_via_proxy(
-                    origin=self._remote_origin,
-                    connect_timeout=timeout,
-                )
-
-                ssl_object = stream.get_extra_info("ssl_object")
-                http2_negotiated = (
-                    ssl_object is not None and ssl_object.selected_alpn_protocol() == "h2"
-                )
-                if http2_negotiated or (self._http2 and not self._http1):
-                    from httpcore import AsyncHTTP2Connection
-
-                    self._connection = AsyncHTTP2Connection(
+        try:
+            async with self._connect_lock:
+                if self._connection is None:
+                    stream = await self._connect_via_proxy(
                         origin=self._remote_origin,
-                        stream=stream,
-                        keepalive_expiry=self._keepalive_expiry,
+                        connect_timeout=timeout,
                     )
-                else:
-                    self._connection = AsyncHTTP11Connection(
-                        origin=self._remote_origin,
-                        stream=stream,
-                        keepalive_expiry=self._keepalive_expiry,
-                    )
-            elif not self._connection.is_available():  # pragma: no cover
-                raise ConnectionNotAvailable()
 
-            return await self._connection.handle_async_request(request)
+                    ssl_object = stream.get_extra_info("ssl_object")
+                    http2_negotiated = (
+                        ssl_object is not None and ssl_object.selected_alpn_protocol() == "h2"
+                    )
+                    if http2_negotiated or (self._http2 and not self._http1):
+                        from httpcore import AsyncHTTP2Connection
+
+                        self._connection = AsyncHTTP2Connection(
+                            origin=self._remote_origin,
+                            stream=stream,
+                            keepalive_expiry=self._keepalive_expiry,
+                        )
+                    else:
+                        self._connection = AsyncHTTP11Connection(
+                            origin=self._remote_origin,
+                            stream=stream,
+                            keepalive_expiry=self._keepalive_expiry,
+                        )
+                elif not self._connection.is_available():  # pragma: no cover
+                    raise ConnectionNotAvailable()
+        except BaseException as exc:
+            self._connect_failed = True
+            raise exc
+
+        return await self._connection.handle_async_request(request)
 
     async def _connect_via_proxy(self, origin, connect_timeout) -> AsyncNetworkStream:
         scheme, hostname, port = origin.scheme, origin.host, origin.port
@@ -234,20 +239,20 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
     def has_expired(self) -> bool:
         if self._connection is None:
-            return False
+            return self._connect_failed
         return self._connection.has_expired()
 
     def is_idle(self) -> bool:
         if self._connection is None:
-            return False
+            return self._connect_failed
         return self._connection.is_idle()
 
     def is_closed(self) -> bool:
         if self._connection is None:
-            return False
+            return self._connect_failed
         return self._connection.is_closed()
 
     def info(self) -> str:  # pragma: no cover
         if self._connection is None:
-            return "CONNECTING"
+            return "CONNECTION FAILED" if self._connect_failed else "CONNECTING"
         return self._connection.info()
