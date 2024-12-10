@@ -34,7 +34,6 @@ class AsyncProxyTransport(AsyncBaseTransport):
             verify=verify,
             cert=cert,
             trust_env=trust_env,
-            http2=kwargs.get('http2', False),
         )
 
         self._pool = AsyncProxy(
