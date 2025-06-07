@@ -10,6 +10,7 @@ from httpcore import (
     HTTP11Connection,
     ConnectionNotAvailable,
 )
+
 # from httpcore.backends.sync import SyncStream
 from ._sync_stream import SyncStream
 from httpcore._synchronization import Lock
@@ -116,6 +117,11 @@ class SyncProxyConnection(ConnectionInterface):
         try:
             with self._connect_lock:
                 if self._connection is None:
+
+                    if self._ssl_context is not None:
+                        alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        self._ssl_context.set_alpn_protocols(alpn_protocols)
+
                     stream = self._connect_via_proxy(
                         origin=self._remote_origin,
                         connect_timeout=timeout,
