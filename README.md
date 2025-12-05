@@ -3,21 +3,22 @@
 [![CI](https://github.com/romis2012/httpx-socks/actions/workflows/ci.yml/badge.svg)](https://github.com/romis2012/httpx-socks/actions/workflows/ci.yml)
 [![Coverage Status](https://codecov.io/gh/romis2012/httpx-socks/branch/master/graph/badge.svg)](https://codecov.io/gh/romis2012/httpx-socks)
 [![PyPI version](https://badge.fury.io/py/httpx-socks.svg)](https://pypi.python.org/pypi/httpx-socks)
+[![versions](https://img.shields.io/pypi/pyversions/httpx-socks.svg)](https://github.com/romis2012/httpx-socks)
 <!--
 [![Downloads](https://pepy.tech/badge/httpx-socks/month)](https://pepy.tech/project/httpx-socks)
 -->
 
 The `httpx-socks` package provides proxy transports for [httpx](https://github.com/encode/httpx) client. 
-SOCKS4(a), SOCKS5(h), HTTP (tunneling) proxy supported.
+SOCKS4(a), SOCKS5(h), HTTP CONNECT proxy supported.
 It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy functionality.
 
 
 ## Requirements
-- Python >= 3.6
-- httpx>=0.21.0
-- python-socks>=2.0.0
-- async-timeout>=3.0.1 (optional)
-- trio>=0.16.0 (optional)
+- Python >= 3.8
+- httpx>=0.28.0,<0.29.0
+- python-socks>=2.4.3,<3.0.0
+- trio>=0.24 (optional)
+- anyio>=3.3.4,<5.0.0 (optional)
 
 
 ## Installation
@@ -36,7 +37,6 @@ to include optional trio support:
 ```
 pip install httpx-socks[trio]
 ```
-
 
 ## Usage
 

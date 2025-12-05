@@ -1,8 +1,74 @@
+[build-system]
+requires = ['setuptools']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'httpx-socks'
+license = { text = 'Apache-2.0' }
+description = 'Proxy (HTTP, SOCKS) transports for httpx'
+readme = 'README.md'
+authors = [{ name = 'Roman Snegirev', email = 'snegiryev@gmail.com' }]
+keywords = [
+    'httpx',
+    'socks',
+    'socks5',
+    'socks4',
+    'http',
+    'proxy',
+    'asyncio',
+    'trio',
+    'anyio',
+]
+requires-python = ">=3.8"
+dynamic = ['version']
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Internet :: WWW/HTTP",
+    "Intended Audience :: Developers",
+    "Framework :: AsyncIO",
+    "Framework :: Trio",
+    "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+    "httpx>=0.28.0,<0.29.0", 
+    "httpcore>=1.0,<2.0",
+    "python-socks>=2.4.3,<3.0.0",
+    "sniffio>=1.1.0",
+]
+
+[project.optional-dependencies]
+asyncio = ['async-timeout>=4.0; python_version < "3.11"']
+trio = ['trio>=0.24']
+anyio = ['anyio>=3.3.4,<5.0.0']
+
+[project.urls]
+homepage = 'https://github.com/romis2012/httpx-socks'
+repository = 'https://github.com/romis2012/httpx-socks'
+
+[tool.setuptools.dynamic]
+version = { attr = 'httpx_socks.__version__' }
+
+[tool.setuptools.packages.find]
+include = ['httpx_socks*']
+
 [tool.black]
 line-length = 99
-target-version = ['py37', 'py38', 'py39']
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
 skip-string-normalization = true
-experimental-string-processing = true
+preview = true
 verbose = true
 
 [tool.pytest.ini_options]

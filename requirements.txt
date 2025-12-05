@@ -1,7 +1,0 @@
-httpx>=0.28.0,<0.29.0
-httpcore>=1.0,<2.0
-anyio==3.*
-python-socks>=2.0.0
-async-timeout>=3.0.1
-trio>=0.16.0
-sniffio>=1.1.0
