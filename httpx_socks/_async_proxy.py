@@ -185,7 +185,7 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
     async def _open_aio_stream(self, host, port, connect_timeout, ssl_context):
         from httpcore._backends.anyio import AnyIOStream
-        from python_socks.async_.anyio import Proxy
+        from python_socks.async_.anyio.v2 import Proxy
 
         proxy = Proxy.create(
             proxy_type=self._proxy_type,
