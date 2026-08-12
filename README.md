@@ -14,11 +14,11 @@ It uses [python-socks](https://github.com/romis2012/python-socks) for core proxy
 
 
 ## Requirements
-- Python >= 3.8
+- Python >= 3.9
 - httpx>=0.28.0,<0.29.0
 - python-socks>=2.4.3,<3.0.0
-- trio>=0.24 (optional)
-- anyio>=3.3.4,<5.0.0 (optional)
+- trio>=0.30 (optional)
+- anyio>=4.12,<5.0.0 (optional)
 
 
 ## Installation
@@ -64,15 +64,14 @@ async def fetch(url):
         return res.text
 ```
 
-#### secure proxy connections (aka "HTTPS proxies", experimental feature, both sync and async support)
+#### secure proxy connections (experimental feature, both sync and async support)
 ```python
 import ssl
 import httpx
 from httpx_socks import AsyncProxyTransport
 
 async def fetch(url):
-    proxy_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    proxy_ssl.verify_mode = ssl.CERT_REQUIRED
+    proxy_ssl = ssl.create_default_context()
     proxy_ssl.load_verify_locations(...)
     
     transport = AsyncProxyTransport.from_url('http://user:password@127.0.0.1:8080', proxy_ssl=proxy_ssl)
