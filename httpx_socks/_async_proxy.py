@@ -31,7 +31,6 @@ class AsyncProxy(AsyncConnectionPool):
         password: str | None = None,
         rdns: bool | None = None,
         proxy_ssl: ssl.SSLContext | None = None,
-        loop: Any = None,  # TODO: remove me  # noqa: FIX002
         **kwargs: Any,
     ) -> None:
         self._proxy_type = proxy_type
@@ -41,7 +40,6 @@ class AsyncProxy(AsyncConnectionPool):
         self._password = password
         self._rdns = rdns
         self._proxy_ssl = proxy_ssl
-        self._loop = loop
 
         super().__init__(**kwargs)
 
@@ -54,7 +52,6 @@ class AsyncProxy(AsyncConnectionPool):
             password=self._password,
             rdns=self._rdns,
             proxy_ssl=self._proxy_ssl,
-            loop=self._loop,
             remote_origin=origin,
             ssl_context=self._ssl_context,
             keepalive_expiry=self._keepalive_expiry,
@@ -86,7 +83,6 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         password: str | None = None,
         rdns: bool | None = None,
         proxy_ssl: ssl.SSLContext | None = None,
-        loop: Any = None,  # TODO: remove me  # noqa: FIX002
         remote_origin: Origin,
         ssl_context: ssl.SSLContext | None,
         keepalive_expiry: float | None = None,
@@ -104,7 +100,6 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         self._password = password
         self._rdns = rdns
         self._proxy_ssl = proxy_ssl
-        self._loop = loop
 
         self._remote_origin = remote_origin
         self._ssl_context = ssl_context
