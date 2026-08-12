@@ -1,22 +1,25 @@
+# ruff: noqa: PLC0415
+from __future__ import annotations
+
 import ssl
+from typing import Any
 
 from httpcore import (
-    ConnectionPool,
-    Origin,
     ConnectionInterface,
+    ConnectionNotAvailable,
+    ConnectionPool,
+    HTTP11Connection,
+    Origin,
     Request,
     Response,
     default_ssl_context,
-    HTTP11Connection,
-    ConnectionNotAvailable,
 )
+from httpcore._synchronization import Lock
+from python_socks import ProxyType, parse_proxy_url
+from python_socks.sync.v2 import Proxy
 
 # from httpcore.backends.sync import SyncStream
 from ._sync_stream import SyncStream
-from httpcore._synchronization import Lock
-
-from python_socks import ProxyType, parse_proxy_url
-from python_socks.sync.v2 import Proxy
 
 
 class SyncProxy(ConnectionPool):
@@ -26,12 +29,12 @@ class SyncProxy(ConnectionPool):
         proxy_type: ProxyType,
         proxy_host: str,
         proxy_port: int,
-        username=None,
-        password=None,
-        rdns=None,
-        proxy_ssl: ssl.SSLContext = None,
-        **kwargs,
-    ):
+        username: str | None = None,
+        password: str | None = None,
+        rdns: bool | None = None,
+        proxy_ssl: ssl.SSLContext | None = None,
+        **kwargs: Any,
+    ) -> None:
         self._proxy_type = proxy_type
         self._proxy_host = proxy_host
         self._proxy_port = proxy_port
@@ -59,7 +62,7 @@ class SyncProxy(ConnectionPool):
         )
 
     @classmethod
-    def from_url(cls, url, **kwargs):
+    def from_url(cls, url: str, **kwargs: Any) -> SyncProxy:
         proxy_type, host, port, username, password = parse_proxy_url(url)
         return cls(
             proxy_type=proxy_type,
@@ -72,19 +75,19 @@ class SyncProxy(ConnectionPool):
 
 
 class SyncProxyConnection(ConnectionInterface):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         proxy_type: ProxyType,
         proxy_host: str,
         proxy_port: int,
-        username=None,
-        password=None,
-        rdns=None,
-        proxy_ssl: ssl.SSLContext = None,
+        username: str | None = None,
+        password: str | None = None,
+        rdns: bool | None = None,
+        proxy_ssl: ssl.SSLContext | None = None,
         remote_origin: Origin,
-        ssl_context: ssl.SSLContext,
-        keepalive_expiry: float = None,
+        ssl_context: ssl.SSLContext | None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
     ) -> None:
@@ -107,19 +110,20 @@ class SyncProxyConnection(ConnectionInterface):
         self._http2 = http2
 
         self._connect_lock = Lock()
-        self._connection = None
+        self._connection: ConnectionInterface | None = None
         self._connect_failed: bool = False
 
     def handle_request(self, request: Request) -> Response:
-        timeouts = request.extensions.get('timeout', {})
-        timeout = timeouts.get('connect', None)
+        timeouts = request.extensions.get("timeout", {})
+        timeout = timeouts.get("connect", None)
 
         try:
             with self._connect_lock:
                 if self._connection is None:
-
                     if self._ssl_context is not None:
-                        alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        alpn_protocols = (
+                            ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        )
                         self._ssl_context.set_alpn_protocols(alpn_protocols)
 
                     stream = self._connect_via_proxy(
@@ -127,9 +131,10 @@ class SyncProxyConnection(ConnectionInterface):
                         connect_timeout=timeout,
                     )
 
-                    ssl_object = stream.get_extra_info('ssl_object')
+                    ssl_object = stream.get_extra_info("ssl_object")
                     http2_negotiated = (
-                        ssl_object is not None and ssl_object.selected_alpn_protocol() == "h2"
+                        ssl_object is not None
+                        and ssl_object.selected_alpn_protocol() == "h2"
                     )
                     if http2_negotiated or (self._http2 and not self._http1):
                         from httpcore import HTTP2Connection
@@ -146,18 +151,22 @@ class SyncProxyConnection(ConnectionInterface):
                             keepalive_expiry=self._keepalive_expiry,
                         )
                 elif not self._connection.is_available():  # pragma: no cover
-                    raise ConnectionNotAvailable()
-        except BaseException as exc:
+                    raise ConnectionNotAvailable  # noqa: TRY301
+        except BaseException:
             self._connect_failed = True
-            raise exc
+            raise
 
         return self._connection.handle_request(request)
 
-    def _connect_via_proxy(self, origin: Origin, connect_timeout: int):
+    def _connect_via_proxy(
+        self,
+        origin: Origin,
+        connect_timeout: float | None,
+    ) -> SyncStream:
         scheme, hostname, port = origin.scheme, origin.host, origin.port
 
-        ssl_context = self._ssl_context if scheme == b'https' else None
-        host = hostname.decode('ascii')
+        ssl_context = self._ssl_context if scheme == b"https" else None
+        host = hostname.decode("ascii")
 
         proxy = Proxy.create(
             proxy_type=self._proxy_type,
@@ -176,7 +185,7 @@ class SyncProxyConnection(ConnectionInterface):
             timeout=connect_timeout,
         )
 
-        return SyncStream(sock=proxy_stream.socket)
+        return SyncStream(sock=proxy_stream.socket)  # type:ignore[arg-type]
 
     def close(self) -> None:
         if self._connection is not None:
@@ -187,7 +196,6 @@ class SyncProxyConnection(ConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:  # pragma: no cover
-            # return self._http2 and (self._remote_origin.scheme == b"https" or not self._http1)
             return False
         return self._connection.is_available()
 

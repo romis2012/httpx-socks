@@ -1,17 +1,21 @@
+# ruff: noqa: PLC0415
+from __future__ import annotations
+
 import ssl
+from typing import Any
 
 import sniffio
 from httpcore import (
-    AsyncConnectionPool,
-    Origin,
     AsyncConnectionInterface,
+    AsyncConnectionPool,
+    AsyncHTTP11Connection,
+    AsyncNetworkStream,
+    ConnectionNotAvailable,
+    Origin,
     Request,
     Response,
     default_ssl_context,
-    AsyncHTTP11Connection,
-    ConnectionNotAvailable,
 )
-from httpcore import AsyncNetworkStream
 from httpcore._synchronization import AsyncLock
 from python_socks import ProxyType, parse_proxy_url
 
@@ -23,13 +27,13 @@ class AsyncProxy(AsyncConnectionPool):
         proxy_type: ProxyType,
         proxy_host: str,
         proxy_port: int,
-        username=None,
-        password=None,
-        rdns=None,
-        proxy_ssl: ssl.SSLContext = None,
-        loop=None,
-        **kwargs,
-    ):
+        username: str | None = None,
+        password: str | None = None,
+        rdns: bool | None = None,
+        proxy_ssl: ssl.SSLContext | None = None,
+        loop: Any = None,  # TODO: remove me  # noqa: FIX002
+        **kwargs: Any,
+    ) -> None:
         self._proxy_type = proxy_type
         self._proxy_host = proxy_host
         self._proxy_port = proxy_port
@@ -59,7 +63,7 @@ class AsyncProxy(AsyncConnectionPool):
         )
 
     @classmethod
-    def from_url(cls, url, **kwargs):
+    def from_url(cls, url: str, **kwargs: Any) -> AsyncProxy:
         proxy_type, host, port, username, password = parse_proxy_url(url)
         return cls(
             proxy_type=proxy_type,
@@ -72,20 +76,20 @@ class AsyncProxy(AsyncConnectionPool):
 
 
 class AsyncProxyConnection(AsyncConnectionInterface):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         proxy_type: ProxyType,
         proxy_host: str,
         proxy_port: int,
-        username=None,
-        password=None,
-        rdns=None,
-        proxy_ssl: ssl.SSLContext = None,
-        loop=None,
+        username: str | None = None,
+        password: str | None = None,
+        rdns: bool | None = None,
+        proxy_ssl: ssl.SSLContext | None = None,
+        loop: Any = None,  # TODO: remove me  # noqa: FIX002
         remote_origin: Origin,
-        ssl_context: ssl.SSLContext,
-        keepalive_expiry: float = None,
+        ssl_context: ssl.SSLContext | None,
+        keepalive_expiry: float | None = None,
         http1: bool = True,
         http2: bool = False,
     ) -> None:
@@ -109,19 +113,20 @@ class AsyncProxyConnection(AsyncConnectionInterface):
         self._http2 = http2
 
         self._connect_lock = AsyncLock()
-        self._connection = None
+        self._connection: AsyncConnectionInterface | None = None
         self._connect_failed: bool = False
 
     async def handle_async_request(self, request: Request) -> Response:
-        timeouts = request.extensions.get('timeout', {})
-        timeout = timeouts.get('connect', None)
+        timeouts = request.extensions.get("timeout", {})
+        timeout = timeouts.get("connect", None)
 
         try:
             async with self._connect_lock:
                 if self._connection is None:
-
                     if self._ssl_context is not None:
-                        alpn_protocols = ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        alpn_protocols = (
+                            ["http/1.1", "h2"] if self._http2 else ["http/1.1"]
+                        )
                         self._ssl_context.set_alpn_protocols(alpn_protocols)
 
                     stream = await self._connect_via_proxy(
@@ -131,7 +136,8 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
                     ssl_object = stream.get_extra_info("ssl_object")
                     http2_negotiated = (
-                        ssl_object is not None and ssl_object.selected_alpn_protocol() == "h2"
+                        ssl_object is not None
+                        and ssl_object.selected_alpn_protocol() == "h2"
                     )
                     if http2_negotiated or (self._http2 and not self._http1):
                         from httpcore import AsyncHTTP2Connection
@@ -148,18 +154,22 @@ class AsyncProxyConnection(AsyncConnectionInterface):
                             keepalive_expiry=self._keepalive_expiry,
                         )
                 elif not self._connection.is_available():  # pragma: no cover
-                    raise ConnectionNotAvailable()
-        except BaseException as exc:
+                    raise ConnectionNotAvailable  # noqa: TRY301
+        except BaseException:
             self._connect_failed = True
-            raise exc
+            raise
 
         return await self._connection.handle_async_request(request)
 
-    async def _connect_via_proxy(self, origin, connect_timeout) -> AsyncNetworkStream:
+    async def _connect_via_proxy(
+        self,
+        origin: Origin,
+        connect_timeout: float | None,
+    ) -> AsyncNetworkStream:
         scheme, hostname, port = origin.scheme, origin.host, origin.port
 
-        ssl_context = self._ssl_context if scheme == b'https' else None
-        host = hostname.decode('ascii')  # ?
+        ssl_context = self._ssl_context if scheme == b"https" else None
+        host = hostname.decode("ascii")  # ?
 
         return await self._open_stream(
             host=host,
@@ -168,22 +178,32 @@ class AsyncProxyConnection(AsyncConnectionInterface):
             ssl_context=ssl_context,
         )
 
-    async def _open_stream(self, host, port, connect_timeout, ssl_context):
+    async def _open_stream(
+        self,
+        host: str,
+        port: int,
+        connect_timeout: float | None,
+        ssl_context: ssl.SSLContext | None,
+    ) -> AsyncNetworkStream:
         backend = sniffio.current_async_library()
 
-        if backend == 'asyncio':
+        if backend == "asyncio":
             return await self._open_aio_stream(host, port, connect_timeout, ssl_context)
 
-        if backend == 'trio':
+        if backend == "trio":
             return await self._open_trio_stream(host, port, connect_timeout, ssl_context)
 
-        # Curio support has been dropped in httpcore 0.14.0
-        # if backend == 'curio':
-        #     return await self._open_curio_stream(host, port, connect_timeout, ssl_context)
+        raise RuntimeError(
+            f"Unsupported concurrency backend {backend!r}"
+        )  # pragma: no cover
 
-        raise RuntimeError(f'Unsupported concurrency backend {backend!r}')  # pragma: no cover
-
-    async def _open_aio_stream(self, host, port, connect_timeout, ssl_context):
+    async def _open_aio_stream(
+        self,
+        host: str,
+        port: int,
+        connect_timeout: float | None,
+        ssl_context: ssl.SSLContext | None,
+    ) -> AsyncNetworkStream:
         from httpcore._backends.anyio import AnyIOStream
         from python_socks.async_.anyio.v2 import Proxy
 
@@ -206,7 +226,13 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
         return AnyIOStream(proxy_stream.anyio_stream)
 
-    async def _open_trio_stream(self, host, port, connect_timeout, ssl_context):
+    async def _open_trio_stream(
+        self,
+        host: str,
+        port: int,
+        connect_timeout: float | None,
+        ssl_context: ssl.SSLContext | None,
+    ) -> AsyncNetworkStream:
         from httpcore._backends.trio import TrioStream
         from python_socks.async_.trio.v2 import Proxy
 
@@ -238,7 +264,6 @@ class AsyncProxyConnection(AsyncConnectionInterface):
 
     def is_available(self) -> bool:
         if self._connection is None:  # pragma: no cover
-            # return self._http2 and (self._remote_origin.scheme == b"https" or not self._http1)
             return False
         return self._connection.is_available()
 

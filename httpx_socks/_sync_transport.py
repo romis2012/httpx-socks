@@ -1,36 +1,40 @@
+from __future__ import annotations
+
 import ssl
-import typing
+from collections.abc import Iterable
+from types import TracebackType
+from typing import Any
 
 import httpcore
-
-from httpx import BaseTransport, Request, Response, SyncByteStream, Limits
-
-# noinspection PyProtectedMember
+from httpx import BaseTransport, Limits, Request, Response, SyncByteStream
 from httpx._config import DEFAULT_LIMITS, create_ssl_context
-# noinspection PyProtectedMember
 from httpx._transports.default import ResponseStream, map_httpcore_exceptions
+from httpx._types import CertTypes
+from python_socks import ProxyType, parse_proxy_url
 
 from ._sync_proxy import SyncProxy
-from python_socks import ProxyType, parse_proxy_url
 
 
 class SyncProxyTransport(BaseTransport):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         proxy_type: ProxyType,
         proxy_host: str,
         proxy_port: int,
-        username=None,
-        password=None,
-        rdns=None,
-        proxy_ssl: ssl.SSLContext = None,
-        verify=True,
-        cert=None,
+        username: str | None = None,
+        password: str | None = None,
+        rdns: bool | None = None,
+        proxy_ssl: ssl.SSLContext | None = None,
+        verify: ssl.SSLContext | str | bool | None = True,
+        cert: CertTypes | None = None,
         trust_env: bool = True,
         limits: Limits = DEFAULT_LIMITS,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
+        if verify is None:
+            verify = False
+
         ssl_context = create_ssl_context(
             verify=verify,
             cert=cert,
@@ -71,7 +75,7 @@ class SyncProxyTransport(BaseTransport):
         with map_httpcore_exceptions():
             resp = self._pool.handle_request(req)
 
-        assert isinstance(resp.stream, typing.Iterable)
+        assert isinstance(resp.stream, Iterable)
 
         return Response(
             status_code=resp.status,
@@ -81,7 +85,7 @@ class SyncProxyTransport(BaseTransport):
         )
 
     @classmethod
-    def from_url(cls, url, **kwargs):
+    def from_url(cls, url: str, **kwargs: Any) -> SyncProxyTransport:
         proxy_type, host, port, username, password = parse_proxy_url(url)
         return cls(
             proxy_type=proxy_type,
@@ -95,10 +99,15 @@ class SyncProxyTransport(BaseTransport):
     def close(self) -> None:
         self._pool.close()  # pragma: no cover
 
-    def __enter__(self):
+    def __enter__(self) -> SyncProxyTransport:  # noqa: PYI034
         self._pool.__enter__()
         return self
 
-    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
+    ) -> None:
         with map_httpcore_exceptions():
             self._pool.__exit__(exc_type, exc_value, traceback)
